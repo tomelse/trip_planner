@@ -1,6 +1,7 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
-  import { hoverable, revealRow } from '../lib/hoverable'
+  import { hoverable } from '../lib/hoverable'
+  import { revealRow } from '../lib/scroll'
   import { fmt, fmtTime } from '../lib/dates'
   import { MODES, carrierLabel, dayOffset, legDuration, legTitle, legTzNote, modeLabel, numberLabel } from '../lib/legs'
   import { validTz } from '../lib/tz'

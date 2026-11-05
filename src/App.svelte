@@ -29,6 +29,16 @@
   })
   useBackButton()
 
+  // Only the panels inside the page scroll. If anything ever shifts the page itself (there is no scrollbar to undo
+  // it), put it straight back so the map and the trip menu can't end up out of reach.
+  $effect(() => {
+    const reset = () => {
+      if (window.scrollX || window.scrollY) window.scrollTo(0, 0)
+    }
+    window.addEventListener('scroll', reset, { passive: true })
+    return () => window.removeEventListener('scroll', reset)
+  })
+
   const typing = (el: HTMLElement | null) =>
     !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 

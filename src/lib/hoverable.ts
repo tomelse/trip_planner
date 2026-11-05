@@ -37,8 +37,3 @@ export function hoverable(node: HTMLElement, ref: Ref) {
     },
   }
 }
-
-/** Scroll the row with this id into view inside `list`. */
-export function revealRow(list: HTMLElement | undefined, id: number | null) {
-  if (id !== null) list?.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest' })
-}

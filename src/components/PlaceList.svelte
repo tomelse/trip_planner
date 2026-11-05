@@ -1,6 +1,7 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
-  import { hoverable, revealRow } from '../lib/hoverable'
+  import { hoverable } from '../lib/hoverable'
+  import { revealRow } from '../lib/scroll'
   import { fmtStay } from '../lib/dates'
   import { CATEGORIES, categoryLabel } from '../lib/categories'
   import { PALETTE } from '../lib/palette'

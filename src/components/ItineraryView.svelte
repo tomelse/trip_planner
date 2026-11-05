@@ -1,6 +1,7 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
   import { hoverable } from '../lib/hoverable'
+  import { scrollWithin } from '../lib/scroll'
   import { fmt, iso } from '../lib/dates'
   import { legTitle, modeLabel } from '../lib/legs'
   import { buildItinerary } from '../lib/itinerary'
@@ -16,7 +17,8 @@
     const id = store.current?.trip.id ?? -1
     if (!root || id === scrolledFor) return
     scrolledFor = id
-    if (nextDay) root.querySelector(`[data-day="${nextDay}"]`)?.scrollIntoView({ block: 'start' })
+    const day = nextDay && root.querySelector<HTMLElement>(`[data-day="${nextDay}"]`)
+    if (day) scrollWithin(day, 'start')
   })
 </script>
 
@@ -77,7 +79,7 @@
 <style>
   section {
     border-top: 1px solid var(--line); padding: 10px 12px 6px;
-    /* scrollIntoView stops short by this much, so a day lands just under the sticky Month | Itinerary bar. */
+    /* Scrolling to a day stops this far short, so it lands just under the sticky Month | Itinerary bar. */
     scroll-margin-top: calc(var(--sticky-top, 0px) + var(--viewbar-h));
   }
   section:first-of-type { border-top: none; }
