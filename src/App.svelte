@@ -13,7 +13,7 @@
   function onkeydown(e: KeyboardEvent) {
     if (typing(e.target as HTMLElement | null)) return
     // Cmd/Ctrl+Z undoes the last delete (in a text field it keeps undoing text instead).
-    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && store.toast?.undo) {
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && store.toast?.undo && store.toast.label === 'Undo') {
       e.preventDefault()
       store.undo()
     }

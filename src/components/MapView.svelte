@@ -67,7 +67,8 @@
     L.control.zoom({ position: 'bottomright' }).addTo(m)
     const osm = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     baseLayers = {
-      standard: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: osm }),
+      // crossOrigin makes the tile request CORS, so the service worker can cache real (not opaque) responses.
+      standard: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: osm, crossOrigin: true }),
       transit: L.tileLayer('https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: `Map <a href="https://memomaps.de">memomaps.de</a> · ${osm}`,
@@ -164,6 +165,8 @@
       const dot = pin.marker.getElement()?.querySelector('.pin')
       dot?.classList.toggle('sel', selected)
       dot?.classList.toggle('hot', hot)
+      // A softer halo for the places at the ends of a hovered leg.
+      dot?.classList.toggle('near', focus.isRelated(placeRef(p.id)))
       pin.marker.setZIndexOffset(hot ? 2000 : selected ? 1000 : 0)
       pin.marker.setOpacity(!filter || p.category === filter ? 1 : 0.2)
     }
@@ -210,6 +213,15 @@
 
   // Restyle pins as hover, selection or the category filter change.
   $effect(paintPins)
+
+  /** Soft halo on the airport/station markers at the ends of a hovered leg. */
+  function paintSpots() {
+    const leg = focus.hoveredLegId()
+    for (const [key, mk] of spots) {
+      const near = leg !== null && !!spotLegIds.get(key)?.includes(leg)
+      mk.getElement()?.querySelector('.pin')?.classList.toggle('near', near)
+    }
+  }
 
   // ---- Airport / station markers; legs sharing a spot share a marker.
   $effect(() => {
@@ -268,7 +280,10 @@
         spots.set(key, mk)
       } else mk.setTooltipContent(el)
     }
+    untrack(paintSpots)
   })
+
+  $effect(paintSpots)
 
   // ---- Leg arcs
   // Shown on the Travel tab, or as a preview while a leg (or its airport marker) is hovered from anywhere.

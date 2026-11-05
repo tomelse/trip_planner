@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import { store, type Tab } from '../lib/store.svelte'
   import TripPicker from './TripPicker.svelte'
   import IssuesBanner from './IssuesBanner.svelte'
@@ -8,9 +9,10 @@
   import NotesPanel from './NotesPanel.svelte'
 
   // A highlight that came from a list must not outlive that list when you switch tabs.
+  // Untracked: clearListHover reads the hover itself, and we only want to react to the tab changing.
   $effect(() => {
     void store.tab
-    store.focus.clearListHover()
+    untrack(() => store.focus.clearListHover())
   })
 
   const tabs: { id: Tab; label: string }[] = [

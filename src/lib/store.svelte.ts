@@ -1,4 +1,5 @@
 import { api } from './api'
+import * as db from './db'
 import { addDays, iso, parse } from './dates'
 import { reverse } from './geo'
 import { Focus } from './focus.svelte'
@@ -25,7 +26,7 @@ class Store {
   /** Category chip selected in the Places tab; hides other places in the list and dims them on the map. */
   categoryFilter = $state<string | null>(null)
   /** Transient message, with an Undo action after a delete. */
-  toast = $state<{ message: string; undo: (() => Promise<void>) | null } | null>(null)
+  toast = $state<{ message: string; undo: (() => Promise<void>) | null; label: string } | null>(null)
   /** Things in the plan that can't work (reversed times, overlapping legs, ...). */
   issues = $derived<Issue[]>(this.current ? findIssues(this.current) : [])
 
@@ -36,12 +37,15 @@ class Store {
 
   async init() {
     try {
+      // Ask the browser not to clear our data under storage pressure (granted for installed apps, mostly).
+      navigator.storage?.persist?.().catch(() => {})
+      await db.purge()
       this.trips = await api.trips()
       const last = Number(localStorage.getItem(LAST_TRIP_KEY))
       const first = this.trips.find((t) => t.id === last) ?? this.trips[0]
       if (first) await this.openTrip(first.id)
     } catch (e) {
-      this.error = 'Cannot reach the local database server. Is `npm run dev` running?'
+      this.error = 'Could not open the on-device database. Private browsing or blocked site data can cause this.'
       console.error(e)
     }
   }
@@ -87,10 +91,21 @@ class Store {
   }
 
   /** Show a message for a few seconds; with `undo`, the toast offers to reverse the delete. */
-  notify(message: string, undo: (() => Promise<void>) | null = null) {
+  notify(message: string, undo: (() => Promise<void>) | null = null, label = 'Undo') {
     clearTimeout(this.toastTimer)
-    this.toast = { message, undo }
+    this.toast = { message, undo, label }
     this.toastTimer = setTimeout(() => (this.toast = null), undo ? 10_000 : 5_000)
+  }
+
+  /** Write any edits still waiting on the typing delay, e.g. before exporting. */
+  async saveNow() {
+    await this.flush()
+  }
+
+  /** After importing a backup: refresh the trip list and open the first trip that came in. */
+  async afterImport(ids: number[]) {
+    this.trips = await api.trips()
+    if (ids[0] !== undefined) await this.openTrip(ids[0])
   }
 
   async undo() {

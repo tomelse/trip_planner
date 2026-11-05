@@ -5,7 +5,7 @@
 {#if store.toast}
   <div class="toast" role="status">
     <span>{store.toast.message}</span>
-    {#if store.toast.undo}<button onclick={() => store.undo()}>Undo</button>{/if}
+    {#if store.toast.undo}<button onclick={() => store.undo()}>{store.toast.label}</button>{/if}
   </div>
 {/if}
 

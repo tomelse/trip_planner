@@ -87,13 +87,31 @@ export class Focus {
     return h.kind === ref.type && h.id === ref.id
   }
 
-  /** Hovered, or a leg linked to the hovered place. Drives row highlights. */
-  isHot(ref: Ref) {
-    if (this.hovers(ref)) return true
+  /**
+   * Linked to what is hovered without being it, in both directions: the legs of a hovered place, and the places at
+   * the ends of a hovered leg. (A hovered airport marker stands for its legs, not for the places they link to.)
+   */
+  isRelated(ref: Ref) {
     const h = this.hover
-    if (h?.kind !== 'place' || ref.type !== 'leg') return false
-    const leg = this.detail()?.legs.find((l) => l.id === ref.id)
-    return !!leg && (leg.from_place_id === h.id || leg.to_place_id === h.id)
+    if (h?.kind === 'place' && ref.type === 'leg') {
+      const leg = this.detail()?.legs.find((l) => l.id === ref.id)
+      return !!leg && (leg.from_place_id === h.id || leg.to_place_id === h.id)
+    }
+    if (h?.kind === 'leg' && ref.type === 'place') {
+      const leg = this.detail()?.legs.find((l) => l.id === h.id)
+      return !!leg && (leg.from_place_id === ref.id || leg.to_place_id === ref.id)
+    }
+    return false
+  }
+
+  /** Hovered or related. Drives row highlights. */
+  isHot(ref: Ref) {
+    return this.hovers(ref) || this.isRelated(ref)
+  }
+
+  /** The leg itself under the pointer (not via an airport marker), if any. */
+  hoveredLegId(): number | null {
+    return this.hover?.kind === 'leg' ? this.hover.id : null
   }
 
   /** Id of this type being hovered on the map, so its row can be scrolled into view. */

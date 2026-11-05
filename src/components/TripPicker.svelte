@@ -1,7 +1,9 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
+  import DataMenu from './DataMenu.svelte'
 
   let creating = $state(false)
+  let showData = $state(false)
   let name = $state('')
 
   async function create(e: SubmitEvent) {
@@ -34,7 +36,9 @@
       </select>
       <button onclick={() => (creating = true)} title="New trip">+ New</button>
     {/if}
+    <button class="ghost more" class:on={showData} onclick={() => (showData = !showData)} aria-expanded={showData} aria-label="Backup and import" title="Backup and import">⋯</button>
   </div>
+  {#if showData}<DataMenu />{/if}
 
   {#if store.current && !creating}
     {@const trip = store.current.trip}
@@ -54,6 +58,9 @@
 <style>
   header { padding: 14px 12px 8px; display: flex; flex-direction: column; gap: 10px; position: relative; }
   .row, form { display: flex; gap: 6px; }
+  .row form { flex: 1; min-width: 0; }
+  .more { padding: 0 10px; font-size: 18px; line-height: 1; }
+  .more.on { color: var(--ink); background: var(--hover); }
   .title { border-color: transparent; padding: 2px 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
   .title:hover { border-bottom-color: var(--line); border-radius: 0; }
   .dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
