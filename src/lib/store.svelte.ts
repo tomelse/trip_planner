@@ -24,6 +24,9 @@ class Store {
   mapExpanded = $state(false)
   /** The new-trip / trip-details dialog, when open. */
   tripDialog = $state<'new' | 'edit' | null>(null)
+  /** Open menus on the map. Held here so the Back button can close them. */
+  tripMenuOpen = $state(false)
+  layersOpen = $state(false)
   error = $state<string | null>(null)
   /** Category chip selected in the Places tab; hides other places in the list and dims them on the map. */
   categoryFilter = $state<string | null>(null)

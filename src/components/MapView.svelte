@@ -33,8 +33,6 @@
     } catch {}
   })
   let fittedTrip = -1
-  // Narrow screens fold the map switches into one menu; this is whether it is showing.
-  let layersOpen = $state(false)
   let layersEl: HTMLDivElement | undefined = $state()
 
   type Base = 'standard' | 'transit'
@@ -375,7 +373,7 @@
   })
 </script>
 
-<svelte:window onclick={(e) => layersOpen && layersEl && !layersEl.contains(e.target as Node) && (layersOpen = false)} />
+<svelte:window onclick={(e) => store.layersOpen && layersEl && !layersEl.contains(e.target as Node) && (store.layersOpen = false)} />
 
 <section>
   <div bind:this={el} class="map" class:pinning={pinMode}></div>
@@ -388,8 +386,8 @@
       }}
     />
     <div class="layers" bind:this={layersEl}>
-      <button class="layers-btn" aria-expanded={layersOpen} onclick={() => (layersOpen = !layersOpen)}>Map ▾</button>
-      <div class="toggles" class:open={layersOpen}>
+      <button class="layers-btn" aria-expanded={store.layersOpen} onclick={() => (store.layersOpen = !store.layersOpen)}>Map ▾</button>
+      <div class="toggles" class:open={store.layersOpen}>
         <button class:on={pinMode} onclick={() => (pinMode = !pinMode)} title="When on, clicking or tapping the map drops a pin">
           {pinMode ? 'Drop pins: on' : 'Drop pins: off'}
         </button>

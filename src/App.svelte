@@ -5,8 +5,10 @@
   import Toast from './components/Toast.svelte'
   import TripDialog from './components/TripDialog.svelte'
   import { store } from './lib/store.svelte'
+  import { useBackButton } from './lib/backButton.svelte'
 
   onMount(() => store.init())
+  useBackButton()
 
   const typing = (el: HTMLElement | null) =>
     !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))

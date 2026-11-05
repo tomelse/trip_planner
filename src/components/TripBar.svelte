@@ -4,15 +4,19 @@
   import DataMenu from './DataMenu.svelte'
 
   let root: HTMLDivElement | undefined = $state()
-  let open = $state(false)
   let showData = $state(false)
+  const open = $derived(store.tripMenuOpen)
+
+  // The backup panel folds away whenever the menu does, however it was closed (including Back).
+  $effect(() => {
+    if (!store.tripMenuOpen) showData = false
+  })
 
   const trip = $derived(store.current?.trip)
   const dates = $derived(trip ? fmtTripDates(trip.start_date, trip.end_date) : '')
 
   function close() {
-    open = false
-    showData = false
+    store.tripMenuOpen = false
   }
 
   function choose(id: number) {
@@ -40,7 +44,7 @@
     }
   }}
 >
-  <button class="chip" aria-haspopup="menu" aria-expanded={open} onclick={() => (open = !open)}>
+  <button class="chip" aria-haspopup="menu" aria-expanded={open} onclick={() => (store.tripMenuOpen = !store.tripMenuOpen)}>
     <span class="text">
       <span class="name">{trip?.name ?? 'No trips yet'}</span>
       {#if dates}<small>{dates}</small>{/if}
