@@ -36,13 +36,17 @@ const WRITABLE: Record<Table, string[]> = {
   attachments: ['name'],
 } as Record<Table, string[]>
 
+/** Everything in the database, for transactions that clean up across it. */
+const ALL_STORES = [...TABLES, 'blobs', 'covers']
+
 export const MAX_FILE = 50 * 1024 * 1024
 /** Only these are ever displayed inline; everything else is downloaded, never rendered by the browser. */
 export const INLINE_IMAGES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif']
 /** Remove a trip and everything in it for good (not the undoable delete): used to undo a half-finished import. */
 export async function discardTrip(tripId: number) {
   const db = await getDb()
-  const tx = db.transaction([...TABLES, 'blobs'], 'readwrite')
+  const tx = db.transaction(ALL_STORES, 'readwrite')
+  for (const key of await tx.objectStore('places').index('trip_id').getAllKeys(tripId)) await tx.objectStore('covers').delete(key)
   for (const t of ['places', 'legs', 'notes', 'items', 'attachments'] as const) {
     const store = tx.objectStore(t)
     for (const key of await store.index('trip_id').getAllKeys(tripId)) {
@@ -69,6 +73,10 @@ const MIGRATIONS: ((db: IDBPDatabase) => void)[] = [
       if (t !== 'trips') store.createIndex('trip_id', 'trip_id')
     }
     db.createObjectStore('blobs') // attachment id -> Blob
+  },
+  // 2: place photos fetched from Wikipedia/Commons, kept so they work offline. A cache, keyed by place id.
+  (db) => {
+    db.createObjectStore('covers', { keyPath: 'place_id' })
   },
 ]
 
@@ -261,7 +269,7 @@ export async function purge() {
     (l) => gone.places.has(l.from_place_id as number) || gone.places.has(l.to_place_id as number),
   )
 
-  const tx = db.transaction([...TABLES, 'blobs'], 'readwrite')
+  const tx = db.transaction(ALL_STORES, 'readwrite')
   for (const l of stale) {
     if (doomed.get('legs')!.has(l.id)) continue
     if (gone.places.has(l.from_place_id as number)) l.from_place_id = null
@@ -274,5 +282,30 @@ export async function purge() {
       if (t === 'attachments') await tx.objectStore('blobs').delete(id)
     }
   }
+  // A cached photo whose place is gone is just clutter.
+  const livePlaceIds = new Set(await tx.objectStore('places').getAllKeys())
+  for (const key of await tx.objectStore('covers').getAllKeys()) if (!livePlaceIds.has(key as number)) await tx.objectStore('covers').delete(key)
   await tx.done
+}
+
+// ---- place photos (a cache; see photos.ts)
+
+/** What was found for one place, kept with the image so it shows offline. `blob` is absent when nothing was found. */
+export interface CoverRow {
+  place_id: number
+  /** What it was looked up for: the cached result only counts while the place still has this name and position. */
+  name: string
+  lat: number
+  lng: number
+  checked_at: number
+  photo?: { kind: 'article' | 'neighbourhood'; subject: string; width: number; height: number; credit: { author: string; license: string; licenseUrl?: string; pageUrl: string; from: string } }
+  blob?: Blob
+}
+
+export async function getCover(placeId: number): Promise<CoverRow | undefined> {
+  return (await getDb()).get('covers', placeId)
+}
+
+export async function putCover(row: CoverRow) {
+  await (await getDb()).put('covers', row)
 }
