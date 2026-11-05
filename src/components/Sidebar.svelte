@@ -1,0 +1,74 @@
+<script lang="ts">
+  import { store, type Tab } from '../lib/store.svelte'
+  import TripPicker from './TripPicker.svelte'
+  import IssuesBanner from './IssuesBanner.svelte'
+  import PlaceList from './PlaceList.svelte'
+  import TravelList from './TravelList.svelte'
+  import CalendarView from './CalendarView.svelte'
+  import NotesPanel from './NotesPanel.svelte'
+
+  // A highlight that came from a list must not outlive that list when you switch tabs.
+  $effect(() => {
+    void store.tab
+    store.focus.clearListHover()
+  })
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'places', label: 'Places' },
+    { id: 'travel', label: 'Travel' },
+    { id: 'calendar', label: 'Calendar' },
+    { id: 'notes', label: 'Notes' },
+  ]
+</script>
+
+<aside>
+  <TripPicker />
+  {#if store.error}
+    <p class="error">{store.error}</p>
+  {/if}
+  {#if store.current}
+    <IssuesBanner />
+    <nav>
+      {#each tabs as t}
+        <button class:active={store.tab === t.id} onclick={() => (store.tab = t.id)}>
+          {t.label}
+          {#if t.id === 'places'}<span>{store.current.places.length}</span>{/if}
+          {#if t.id === 'travel'}<span>{store.current.legs.length}</span>{/if}
+          {#if t.id === 'notes'}<span>{store.current.notes.length}</span>{/if}
+        </button>
+      {/each}
+    </nav>
+    <div class="body">
+      {#if store.tab === 'places'}<PlaceList />{/if}
+      {#if store.tab === 'travel'}<TravelList />{/if}
+      {#if store.tab === 'calendar'}<CalendarView />{/if}
+      {#if store.tab === 'notes'}<NotesPanel />{/if}
+    </div>
+  {:else if !store.error}
+    <p class="empty">Create a trip to start pinning places.</p>
+  {/if}
+</aside>
+
+<style>
+  aside {
+    display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
+    background: var(--panel); border-right: 1px solid var(--line);
+  }
+  nav { display: flex; gap: 0; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; flex: none; }
+  nav button {
+    border: none; border-radius: 0; padding: 10px 8px; color: var(--ink-2);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; min-height: 0;
+  }
+  nav button:hover { background: none; color: var(--ink); }
+  nav button.active { color: var(--ink); border-bottom-color: var(--ink); }
+  nav span { margin-left: 4px; font-size: 11px; color: var(--ink-3); }
+  .body { flex: 1; overflow-y: auto; min-height: 0; padding-bottom: env(safe-area-inset-bottom); }
+  /* Short screens: let the whole panel scroll so the trip header doesn't eat the list. */
+  @media (max-width: 820px) {
+    aside { overflow-y: auto; }
+    .body { overflow: visible; flex: none; }
+    nav { position: sticky; top: 0; z-index: 2; background: var(--panel); }
+  }
+  .empty, .error { padding: 16px; color: var(--ink-2); margin: 0; }
+  .error { color: var(--danger); }
+</style>

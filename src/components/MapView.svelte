@@ -1,0 +1,396 @@
+<script lang="ts">
+  import L from 'leaflet'
+  import 'leaflet/dist/leaflet.css'
+  import { onMount, untrack } from 'svelte'
+  import { store } from '../lib/store.svelte'
+  import type { Place } from '../lib/types'
+  import type { Ref } from '../lib/focus.svelte'
+  import { endpoint, legBends, legTitle, modeLabel } from '../lib/legs'
+  import { arcArrow, arcPoints } from '../lib/arc'
+  import SearchBox from './SearchBox.svelte'
+
+  const focus = store.focus
+  const placeRef = (id: number): Ref => ({ type: 'place', id })
+  const legRef = (id: number): Ref => ({ type: 'leg', id })
+
+  let el: HTMLDivElement
+  let map: L.Map | undefined = $state()
+  // Off until you turn it on, then remembered, so a stray click or tap never drops a pin by surprise.
+  const PIN_KEY = 'trips:pin-mode'
+  let pinMode = $state(
+    (() => {
+      try {
+        return localStorage.getItem(PIN_KEY) === 'on'
+      } catch {
+        return false
+      }
+    })(),
+  )
+  $effect(() => {
+    try {
+      localStorage.setItem(PIN_KEY, pinMode ? 'on' : 'off')
+    } catch {}
+  })
+  let fittedTrip = -1
+
+  type Base = 'standard' | 'transit'
+  const LAYERS_KEY = 'trips:layers'
+  const saved = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(LAYERS_KEY) ?? '{}') as { base?: Base; rail?: boolean }
+    } catch {
+      return {}
+    }
+  })()
+  let base = $state<Base>(saved.base === 'transit' ? 'transit' : 'standard')
+  let rail = $state(saved.rail === true)
+  let baseLayers: Record<Base, L.TileLayer> | undefined
+  let railLayer: L.TileLayer | undefined
+
+  // ---- Layers on the map. Each effect below owns one kind and keeps it in sync with the store.
+  /** Place pins. Only the colour is baked into the icon; selected/hovered/dimmed are classes set by paintPins(). */
+  const pins = new Map<number, { marker: L.Marker; color: string }>()
+  /** Airport/station markers, keyed by coordinate, and the legs that use each (read by the handlers). */
+  const spots = new Map<string, L.Marker>()
+  const spotLegIds = new Map<string, number[]>()
+  /** Each leg is a visible arc, a wide invisible line that takes the hover and clicks, and a direction arrowhead. */
+  interface LegLayers {
+    line: L.Polyline
+    hit: L.Polyline
+    arrow: L.Marker
+    angle: number
+  }
+  const legLayers = new Map<number, LegLayers>()
+
+  onMount(() => {
+    const m = L.map(el, { zoomControl: false, worldCopyJump: true }).setView([30, 10], 2)
+    L.control.zoom({ position: 'bottomright' }).addTo(m)
+    const osm = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    baseLayers = {
+      standard: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: osm }),
+      transit: L.tileLayer('https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: `Map <a href="https://memomaps.de">memomaps.de</a> · ${osm}`,
+      }),
+    }
+    railLayer = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      subdomains: 'abc',
+      attribution: '<a href="https://www.openrailwaymap.org">OpenRailwayMap</a>',
+    })
+    // Empty map: drop a pin if that mode is on, otherwise close whatever is open.
+    m.on('click', (e: L.LeafletMouseEvent) => {
+      if (pinMode && store.current) store.addPlace(e.latlng.lat, e.latlng.lng)
+      else focus.clearSelection()
+    })
+    // The pane changes size with the layout (rotation, expanding the map), so keep Leaflet in sync.
+    const ro = new ResizeObserver(() => m.invalidateSize())
+    ro.observe(el)
+    map = m
+    return () => {
+      ro.disconnect()
+      m.remove()
+    }
+  })
+
+  const NOTES_MAX = 140
+
+  /** Built as DOM nodes so place names and addresses are never parsed as HTML. */
+  function tooltip(p: Place) {
+    const el = document.createElement('div')
+    const name = document.createElement('strong')
+    name.textContent = p.name
+    el.append(name)
+    if (p.address) {
+      const addr = document.createElement('div')
+      addr.className = 'tip-addr'
+      addr.textContent = p.address
+      el.append(addr)
+    }
+    const notes = p.notes.trim()
+    if (notes) {
+      const n = document.createElement('div')
+      n.className = 'tip-notes'
+      n.textContent = notes.length > NOTES_MAX ? `${notes.slice(0, NOTES_MAX).trimEnd()}…` : notes
+      el.append(n)
+    }
+    return el
+  }
+
+  function arrowIcon(angle: number) {
+    return L.divIcon({
+      className: 'leg-arrow-wrap',
+      html: `<span class="leg-arrow" style="transform: rotate(${angle}deg)"></span>`,
+      iconSize: [12, 12],
+      iconAnchor: [6, 6],
+    })
+  }
+
+  function pinIcon(color: string) {
+    return L.divIcon({
+      className: 'pin-wrap',
+      html: `<span class="pin" style="--c:${color}"></span>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    })
+  }
+
+  // Swap the base map and toggle the rail overlay.
+  $effect(() => {
+    if (!map || !baseLayers || !railLayer) return
+    for (const [name, layer] of Object.entries(baseLayers)) {
+      if (name === base) {
+        if (!map.hasLayer(layer)) map.addLayer(layer)
+        layer.bringToBack()
+      } else map.removeLayer(layer)
+    }
+    if (rail) map.addLayer(railLayer)
+    else map.removeLayer(railLayer)
+    try {
+      localStorage.setItem(LAYERS_KEY, JSON.stringify({ base, rail }))
+    } catch {}
+  })
+
+  // ---- Place pins
+
+  /** Selected / hovered / filtered-out look of every pin. Cheap, and safe to run whenever focus changes. */
+  function paintPins() {
+    const filter = store.categoryFilter
+    for (const p of store.current?.places ?? []) {
+      const pin = pins.get(p.id)
+      if (!pin) continue
+      const selected = focus.isSelected(placeRef(p.id))
+      const hot = focus.hovers(placeRef(p.id))
+      const dot = pin.marker.getElement()?.querySelector('.pin')
+      dot?.classList.toggle('sel', selected)
+      dot?.classList.toggle('hot', hot)
+      pin.marker.setZIndexOffset(hot ? 2000 : selected ? 1000 : 0)
+      pin.marker.setOpacity(!filter || p.category === filter ? 1 : 0.2)
+    }
+  }
+
+  // Create, move and remove pins to match the trip's places.
+  $effect(() => {
+    if (!map) return
+    const places = store.current?.places ?? []
+    const live = new Set(places.map((p) => p.id))
+
+    for (const [id, pin] of pins) {
+      if (!live.has(id)) {
+        pin.marker.remove()
+        pins.delete(id)
+      }
+    }
+    for (const p of places) {
+      let pin = pins.get(p.id)
+      if (!pin) {
+        const marker = L.marker([p.lat, p.lng], { draggable: true, icon: pinIcon(p.color) }).addTo(map)
+        marker.on('click', () => focus.toggle(placeRef(p.id)))
+        marker.on('mouseover', () => focus.hoverRef(placeRef(p.id), 'map'))
+        marker.on('mouseout', () => focus.unhoverRef(placeRef(p.id)))
+        marker.on('dragend', () => {
+          const { lat, lng } = marker.getLatLng()
+          store.patchPlace(p.id, { lat, lng })
+          store.refreshAddress(p.id)
+        })
+        marker.bindTooltip(tooltip(p), { direction: 'top', offset: [0, -8] })
+        pin = { marker, color: p.color }
+        pins.set(p.id, pin)
+      }
+      const ll = pin.marker.getLatLng()
+      if (ll.lat !== p.lat || ll.lng !== p.lng) pin.marker.setLatLng([p.lat, p.lng])
+      if (pin.color !== p.color) {
+        pin.marker.setIcon(pinIcon(p.color))
+        pin.color = p.color
+      }
+      pin.marker.setTooltipContent(tooltip(p))
+    }
+    untrack(paintPins)
+  })
+
+  // Restyle pins as hover, selection or the category filter change.
+  $effect(paintPins)
+
+  // ---- Airport / station markers; legs sharing a spot share a marker.
+  $effect(() => {
+    if (!map) return
+    const found = new Map<string, { latlng: [number, number]; title: string; legs: string[]; legIds: number[] }>()
+    for (const l of store.current?.legs ?? []) {
+      for (const end of ['from', 'to'] as const) {
+        const lat = l[`${end}_lat` as const]
+        const lng = l[`${end}_lng` as const]
+        if (lat === null || lng === null) continue
+        const key = `${lat.toFixed(4)},${lng.toFixed(4)}`
+        const spot = found.get(key) ?? { latlng: [lat, lng] as [number, number], title: '', legs: [], legIds: [] }
+        spot.title ||= l[`${end}_name` as const] || key
+        spot.legs.push(`${modeLabel(l.mode)} · ${legTitle(l)}`)
+        if (!spot.legIds.includes(l.id)) spot.legIds.push(l.id)
+        found.set(key, spot)
+      }
+    }
+    for (const [key, mk] of spots) {
+      if (!found.has(key)) {
+        mk.remove()
+        spots.delete(key)
+      }
+    }
+    spotLegIds.clear()
+    for (const [key, spot] of found) spotLegIds.set(key, spot.legIds)
+    for (const [key, spot] of found) {
+      const el = document.createElement('div')
+      const strong = document.createElement('strong')
+      strong.textContent = spot.title
+      el.append(strong)
+      for (const text of [...new Set(spot.legs)].slice(0, 4)) {
+        const line = document.createElement('div')
+        line.className = 'tip-addr'
+        line.textContent = text
+        el.append(line)
+      }
+      let mk = spots.get(key)
+      if (!mk) {
+        mk = L.marker(spot.latlng, {
+          icon: L.divIcon({
+            className: 'pin-wrap',
+            html: '<span class="pin transit" style="--c:var(--travel)"></span>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+          }),
+        }).addTo(map)
+        mk.bindTooltip(el, { direction: 'top', offset: [0, -8] })
+        // Read through spotLegIds so the handlers stay right when legs are added or removed later.
+        mk.on('click', () => {
+          const first = spotLegIds.get(key)?.[0]
+          if (first !== undefined) focus.toggle(legRef(first))
+        })
+        mk.on('mouseover', () => focus.hoverSpot(spotLegIds.get(key) ?? [], 'map'))
+        mk.on('mouseout', () => focus.unhoverSpot())
+        spots.set(key, mk)
+      } else mk.setTooltipContent(el)
+    }
+  })
+
+  // ---- Leg arcs
+  // Shown on the Travel tab, or as a preview while a leg (or its airport marker) is hovered from anywhere.
+  $effect(() => {
+    if (!map) return
+    const legs = store.current?.legs ?? []
+    const places = store.current?.places ?? []
+    const bends = legBends(legs, places)
+    const all = store.tab === 'travel'
+    const emphasised = (id: number) => focus.isHot(legRef(id)) || focus.isSelected(legRef(id))
+    const anyEmphasised = legs.some((l) => emphasised(l.id))
+    const live = new Set<number>()
+    for (const l of legs) {
+      if (!all && !focus.hovers(legRef(l.id))) continue
+      const a = endpoint(l, 'from', places)
+      const b = endpoint(l, 'to', places)
+      if (!a || !b) continue
+      live.add(l.id)
+      const bend = bends.get(l.id) ?? 0.18
+      const pts = arcPoints(a, b, bend)
+      const { at, angle } = arcArrow(a, b, bend)
+      const label = `${modeLabel(l.mode)} · ${legTitle(l)}${l.depart_time ? ` · ${l.depart_time}` : ''}`
+      let layers = legLayers.get(l.id)
+      if (!layers) {
+        const line = L.polyline(pts, { className: 'leg-line', interactive: false }).addTo(map)
+        // Wider than the drawn line so thin arcs are easy to hit; bubbling off so a click here can't also drop a pin.
+        const hit = L.polyline(pts, { weight: 12, opacity: 0, bubblingMouseEvents: false }).addTo(map)
+        hit.bindTooltip(label, { sticky: true })
+        hit.on('click', () => focus.toggle(legRef(l.id)))
+        hit.on('mouseover', () => focus.hoverRef(legRef(l.id), 'map'))
+        hit.on('mouseout', () => focus.unhoverRef(legRef(l.id)))
+        const arrow = L.marker(at, { icon: arrowIcon(angle), interactive: false, keyboard: false, zIndexOffset: -500 }).addTo(map)
+        layers = { line, hit, arrow, angle }
+        legLayers.set(l.id, layers)
+      } else {
+        layers.line.setLatLngs(pts)
+        layers.hit.setLatLngs(pts)
+        layers.hit.setTooltipContent(label)
+        layers.arrow.setLatLng(at)
+        if (layers.angle !== angle) {
+          layers.arrow.setIcon(arrowIcon(angle))
+          layers.angle = angle
+        }
+      }
+      // Emphasise the hovered/selected leg(s) and fade the rest.
+      const hot = emphasised(l.id)
+      const opacity = hot || !anyEmphasised ? 0.9 : 0.65
+      layers.line.setStyle({ weight: hot ? 3.5 : 2.5, opacity })
+      layers.arrow.setOpacity(opacity)
+      if (hot) layers.line.bringToFront()
+    }
+    for (const [id, layers] of legLayers) {
+      if (!live.has(id)) {
+        layers.line.remove()
+        layers.hit.remove()
+        layers.arrow.remove()
+        legLayers.delete(id)
+      }
+    }
+  })
+
+  // ---- Camera
+
+  // Frame the whole trip when switching trips.
+  $effect(() => {
+    const d = store.current
+    if (!map || !d || d.trip.id === fittedTrip) return
+    fittedTrip = d.trip.id
+    // Frame the places; airports and stations only count when there are no places yet.
+    let pts = d.places.map((p) => [p.lat, p.lng] as [number, number])
+    if (!pts.length) {
+      pts = d.legs.flatMap((l) => (['from', 'to'] as const).map((e) => endpoint(l, e, [])).filter((x) => x !== null))
+    }
+    if (pts.length) map.fitBounds(pts, { padding: [60, 60], maxZoom: 12, animate: false })
+  })
+
+  // Fly to a place when it is opened, if it is off screen.
+  $effect(() => {
+    const sel = focus.selected
+    if (!map || sel?.type !== 'place') return
+    const p = untrack(() => store.current?.places.find((x) => x.id === sel.id))
+    if (p && !map.getBounds().pad(-0.15).contains([p.lat, p.lng])) {
+      map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 9), { duration: 0.6 })
+    }
+  })
+</script>
+
+<section>
+  <div bind:this={el} class="map" class:pinning={pinMode}></div>
+  <div class="overlay">
+    <SearchBox
+      onpick={(r) => {
+        map?.flyTo([r.lat, r.lng], 11, { duration: 0.8 })
+        if (store.current) store.addPlace(r.lat, r.lng, r.name, r.address)
+      }}
+    />
+    <button class:on={pinMode} onclick={() => (pinMode = !pinMode)} title="When on, clicking or tapping the map drops a pin">
+      {pinMode ? 'Drop pins: on' : 'Drop pins: off'}
+    </button>
+    <button class:on={base === 'transit'} onclick={() => (base = base === 'transit' ? 'standard' : 'transit')} title="Show public transport lines">
+      Transit
+    </button>
+    <button class:on={rail} onclick={() => (rail = !rail)} title="Overlay railway lines">Rail</button>
+  </div>
+  <button class="expand" onclick={() => (store.mapExpanded = !store.mapExpanded)}>
+    {store.mapExpanded ? 'Show plan' : 'Bigger map'}
+  </button>
+</section>
+
+<style>
+  section { position: relative; min-width: 0; height: 100%; }
+  .map { position: absolute; inset: 0; }
+  .map.pinning { cursor: crosshair; }
+  .map.pinning :global(.leaflet-dragging) { cursor: grabbing; }
+  .overlay { position: absolute; z-index: 1000; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none; }
+  .overlay > :global(*) { pointer-events: auto; }
+  .expand { display: none; position: absolute; z-index: 1000; left: 12px; bottom: 24px; background: var(--panel); padding: 6px 10px; }
+  @media (max-width: 820px) {
+    .expand { display: block; }
+    .overlay { top: 8px; left: 8px; right: 8px; gap: 6px; }
+    .overlay button { padding: 6px 8px; }
+  }
+  .overlay button { background: var(--panel); padding: 8px 10px; color: var(--ink-2); }
+  .overlay button.on { color: var(--accent); border-color: var(--accent); }
+</style>
