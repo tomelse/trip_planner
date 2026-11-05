@@ -17,7 +17,7 @@ export default defineConfig({
         name: 'Trip Planner',
         short_name: 'Trip Planner',
         description: 'Plan trips: pin places, track travel, notes and a calendar. Your data stays on your device.',
-        theme_color: '#0f766e',
+        theme_color: '#fafaf8',
         background_color: '#fafaf8',
         display: 'standalone',
         // Long-press the icon on Android. Handled in App.svelte from the ?action= parameter.

@@ -506,15 +506,15 @@
   .map { position: absolute; inset: 0; }
   .map.pinning { cursor: crosshair; }
   .map.pinning :global(.leaflet-dragging) { cursor: grabbing; }
-  .overlay { position: absolute; z-index: 1000; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none; }
+  .overlay { position: absolute; z-index: 1000; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); right: calc(12px + env(safe-area-inset-right)); display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none; }
   .overlay > :global(*) { pointer-events: auto; }
-  .expand { display: none; position: absolute; z-index: 1000; left: 12px; bottom: 24px; background: var(--panel); padding: 6px 10px; }
+  .expand { display: none; position: absolute; z-index: 1000; left: calc(12px + env(safe-area-inset-left)); bottom: calc(24px + env(safe-area-inset-bottom)); background: var(--panel); padding: 6px 10px; }
   .layers { position: relative; }
   .layers-btn { display: none; }
   .toggles { display: flex; gap: 8px; }
   @media (max-width: 820px) {
     .expand { display: block; }
-    .overlay { top: 8px; left: 8px; right: 8px; gap: 6px; }
+    .overlay { top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); gap: 6px; }
     .overlay button { padding: 6px 8px; }
     /* One "Map" button instead of three, so the top of a short map isn't all buttons. */
     .layers { margin-left: auto; }

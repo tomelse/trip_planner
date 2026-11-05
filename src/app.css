@@ -90,6 +90,11 @@ label.field > :global(*), label.field input { margin-top: 3px; text-transform: n
 ::selection { background: var(--accent-soft); }
 
 /* Leaflet overrides */
+/* Keep Leaflet's corner controls and attribution clear of a camera cut-out or the gesture bar. */
+.leaflet-top { padding-top: env(safe-area-inset-top); }
+.leaflet-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.leaflet-left { padding-left: env(safe-area-inset-left); }
+.leaflet-right { padding-right: env(safe-area-inset-right); }
 /* Zoom in / out / my location: one bar, hairline dividers, the same icon weight and colours as the rest of the UI. */
 .leaflet-bar { border: 1px solid var(--line); box-shadow: none; border-radius: var(--radius); overflow: hidden; background: var(--panel); }
 .leaflet-container .leaflet-bar a.mc {

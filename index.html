@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f766e" />
+    <!-- Status bar / system bars take the app's surface colour, light or dark, not the accent teal. -->
+    <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Plan trips: pin places, track travel, notes and a calendar. Your data stays on your device." />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
