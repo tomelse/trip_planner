@@ -14,10 +14,19 @@
   $effect(() => revealRow(list, store.focus.mapHoverId('place')))
 
   let looking = $state<number | null>(null)
+  /** What Look up found, shown for you to accept: it is the nearest building, which can be a neighbour. */
+  let suggestion = $state<{ id: number; address: string } | null>(null)
+
   async function lookup(id: number) {
     looking = id
-    await store.refreshAddress(id)
+    suggestion = null
+    const found = await store.nearestAddress(id)
     looking = null
+    const current = store.current?.places.find((p) => p.id === id)?.address.trim()
+    if (found === null) store.notify('Could not look up an address for this pin.')
+    else if (!current) store.patchPlace(id, { address: found }) // nothing to lose
+    else if (found === current) store.notify('That already matches the map.')
+    else suggestion = { id, address: found }
   }
 
   const places = $derived(store.current?.places ?? [])
@@ -134,6 +143,16 @@
               </button>
             </div>
           </label>
+          {#if suggestion?.id === p.id}
+            <div class="sugg">
+              <p>Nearest address on the map: <strong>{suggestion.address}</strong></p>
+              <p class="note">That is the building closest to the pin, so the house number can be a neighbour's. Keep yours if it is right.</p>
+              <div class="acts">
+                <button onclick={() => { store.patchPlace(p.id, { address: suggestion!.address }); suggestion = null }}>Use this</button>
+                <button class="ghost" onclick={() => (suggestion = null)}>Keep mine</button>
+              </div>
+            </div>
+          {/if}
           <div class="dates">
             <label class="field">Arrive
               <input type="date" value={p.arrive_date ?? ''} oninput={(e) => store.patchPlace(p.id, { arrive_date: e.currentTarget.value || null })} />
@@ -188,6 +207,9 @@
   .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
   .sw { width: 20px; height: 20px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
   .sw.on { box-shadow: 0 0 0 2px var(--ink); }
+  .sugg { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; }
+  .sugg p { margin: 0; overflow-wrap: anywhere; }
+  .sugg .note { font-size: 12px; color: var(--ink-3); }
   .addr, .move { display: flex; gap: 4px; }
   .move button { flex: 1; white-space: nowrap; }
   .addr button { white-space: nowrap; }

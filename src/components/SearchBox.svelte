@@ -1,18 +1,25 @@
 <script lang="ts">
-  import { search, type SearchResult } from '../lib/geo'
+  import { search, type SearchResult, type Viewbox } from '../lib/geo'
 
-  let { onpick }: { onpick: (r: SearchResult) => void } = $props()
+  let { onpick, viewbox }: { onpick: (r: SearchResult) => void; viewbox?: () => Viewbox | null } = $props()
 
   let q = $state('')
   let results = $state<SearchResult[]>([])
   let busy = $state(false)
   let searched = $state(false)
+  let failed = $state(false)
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
     if (!q.trim()) return
     busy = true
-    results = await search(q.trim()).catch(() => [])
+    failed = false
+    try {
+      results = await search(q.trim(), viewbox?.())
+    } catch {
+      results = []
+      failed = true
+    }
     searched = true
     busy = false
   }
@@ -27,7 +34,7 @@
 
 <div class="search">
   <form onsubmit={submit}>
-    <input placeholder="Search for a place…" bind:value={q} oninput={() => (searched = false)} />
+    <input placeholder="Search for a place…" bind:value={q} oninput={() => ((searched = false), (failed = false))} />
     {#if busy}<span class="busy">…</span>{/if}
   </form>
   {#if results.length}
@@ -37,7 +44,7 @@
       {/each}
     </ul>
   {:else if searched}
-    <p>No results.</p>
+    <p>{failed ? 'Could not reach the search service. Try again in a moment.' : 'No results.'}</p>
   {/if}
 </div>
 

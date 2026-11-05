@@ -7,6 +7,7 @@
   let results = $state<SearchResult[]>([])
   let busy = $state(false)
   let searched = $state(false)
+  let failed = $state(false)
   let tripId = $state<number | null>(null)
   // Guards against a slow search finishing after the dialog moved on.
   let run = 0
@@ -17,8 +18,14 @@
     const mine = ++run
     busy = true
     searched = false
-    let found = await search(q).catch(() => [])
-    if (!found.length && fallback && fallback !== q) found = await search(fallback).catch(() => [])
+    failed = false
+    let found: SearchResult[] = []
+    try {
+      found = await search(q)
+      if (!found.length && fallback && fallback !== q) found = await search(fallback)
+    } catch {
+      failed = true
+    }
     if (mine !== run) return
     results = found
     busy = false
@@ -104,7 +111,7 @@
             {/each}
           </div>
         {:else if searched}
-          <p class="muted">No matches. Try a fuller name or address.</p>
+          <p class="muted">{failed ? 'Could not reach the search service. Try again in a moment.' : 'No matches. Try a fuller name or address.'}</p>
         {/if}
 
         <div class="buttons"><button onclick={() => (store.shared = null)}>Cancel</button></div>

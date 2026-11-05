@@ -7,6 +7,7 @@
   import type { Ref } from '../lib/focus.svelte'
   import { endpoint, legBends, legTitle, modeLabel } from '../lib/legs'
   import { arcArrow, arcPoints } from '../lib/arc'
+  import { HereControl, MapControls } from '../lib/mapControls'
   import SearchBox from './SearchBox.svelte'
   import TripBar from './TripBar.svelte'
 
@@ -42,6 +43,8 @@
   let meDot: L.CircleMarker | undefined
   let meAccuracy: L.Circle | undefined
   let centreOnNextFix = true
+  let controls: MapControls | undefined
+  let hereControl: HereControl | undefined
 
   function onFix(pos: GeolocationPosition) {
     const { latitude: lat, longitude: lng, accuracy } = pos.coords
@@ -103,6 +106,17 @@
     store.addPlace(fix.lat, fix.lng)
   }
 
+  // The location button shows whether tracking is on; the "+ Add here" pill exists only while there is a fix.
+  $effect(() => {
+    if (!map) return
+    controls?.setLocate(locate)
+    if (fix && !hereControl) hereControl = new HereControl({ onClick: addHere }).addTo(map)
+    else if (!fix && hereControl) {
+      hereControl.remove()
+      hereControl = undefined
+    }
+  })
+
   // GPS drains the battery, so stop listening while the app is out of sight and resume when it is back.
   $effect(() => {
     const onVisibility = () => {
@@ -146,8 +160,10 @@
   const legLayers = new Map<number, LegLayers>()
 
   onMount(() => {
+    // A finger moves a few pixels on any tap; don't let that count as dragging a pin (or the map).
+    if (coarse()) (L.Draggable.prototype as unknown as { options: { clickTolerance: number } }).options.clickTolerance = 12
     const m = L.map(el, { zoomControl: false, worldCopyJump: true }).setView([30, 10], 2)
-    L.control.zoom({ position: 'bottomright' }).addTo(m)
+    controls = new MapControls({ onLocate: () => (locate === 'off' ? startLocate() : stopLocate()) }).addTo(m)
     const osm = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     baseLayers = {
       // crossOrigin makes the tile request CORS, so the service worker can cache real (not opaque) responses.
@@ -173,10 +189,15 @@
     map = m
     return () => {
       stopLocate()
+      controls?.remove()
       ro.disconnect()
       m.remove()
     }
   })
+
+  const coarse = () => matchMedia('(pointer: coarse)').matches
+  /** Dragging a pin further than this means it now marks a different place, so its address is looked up again. */
+  const FAR_DRAG_M = 150
 
   const NOTES_MAX = 140
 
@@ -251,6 +272,8 @@
       dot?.classList.toggle('hot', hot)
       // A softer halo for the places at the ends of a hovered leg.
       dot?.classList.toggle('near', focus.isRelated(placeRef(p.id)))
+      // On a touchscreen a pin only drags once it is open, so tapping or scrolling past one can't move it.
+      if (coarse()) selected ? pin.marker.dragging?.enable() : pin.marker.dragging?.disable()
       pin.marker.setZIndexOffset(hot ? 2000 : selected ? 1000 : 0)
       pin.marker.setOpacity(!filter || p.category === filter ? 1 : 0.2)
     }
@@ -275,10 +298,14 @@
         marker.on('click', () => focus.toggle(placeRef(p.id)))
         marker.on('mouseover', () => focus.hoverRef(placeRef(p.id), 'map'))
         marker.on('mouseout', () => focus.unhoverRef(placeRef(p.id)))
+        let from = marker.getLatLng()
+        marker.on('dragstart', () => (from = marker.getLatLng()))
         marker.on('dragend', () => {
-          const { lat, lng } = marker.getLatLng()
-          store.patchPlace(p.id, { lat, lng })
-          store.refreshAddress(p.id)
+          const to = marker.getLatLng()
+          store.patchPlace(p.id, { lat: to.lat, lng: to.lng })
+          // A nudge keeps the address you have (looking up the pin's own spot can give a neighbour's door number);
+          // a long drag moves it to somewhere else, so only then is the address replaced.
+          if (from.distanceTo(to) > FAR_DRAG_M) store.refreshAddress(p.id)
         })
         marker.bindTooltip(tooltip(p), { direction: 'top', offset: [0, -8] })
         pin = { marker, color: p.color }
@@ -462,6 +489,10 @@
   <div class="overlay">
     <TripBar />
     <SearchBox
+      viewbox={() => {
+        const b = map?.getBounds()
+        return b ? [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] : null
+      }}
       onpick={(r) => {
         map?.flyTo([r.lat, r.lng], 11, { duration: 0.8 })
         if (store.current) store.addPlace(r.lat, r.lng, r.name, r.address)
@@ -480,17 +511,6 @@
       </div>
     </div>
   </div>
-  <div class="locate">
-    {#if fix}<button class="here" onclick={addHere} title="Add your current position as a place">+ Add here</button>{/if}
-    <button
-      class="loc"
-      class:on={locate !== 'off'}
-      aria-pressed={locate !== 'off'}
-      aria-label="Show my location"
-      title={locate === 'off' ? 'Show my location' : 'Hide my location'}
-      onclick={() => (locate === 'off' ? startLocate() : stopLocate())}
-    >{locate === 'finding' ? '…' : '◎'}</button>
-  </div>
   <button class="expand" onclick={() => (store.mapExpanded = !store.mapExpanded)}>
     {store.mapExpanded ? 'Show plan' : 'Bigger map'}
   </button>
@@ -503,11 +523,6 @@
   .map.pinning :global(.leaflet-dragging) { cursor: grabbing; }
   .overlay { position: absolute; z-index: 1000; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none; }
   .overlay > :global(*) { pointer-events: auto; }
-  /* Above Leaflet's zoom buttons (bottom right). */
-  .locate { position: absolute; z-index: 1000; right: 10px; bottom: 84px; display: flex; gap: 6px; align-items: center; }
-  .locate button { background: var(--panel); }
-  .loc { width: 34px; height: 34px; padding: 0; font-size: 18px; line-height: 1; color: var(--ink-2); }
-  .loc.on { color: var(--accent); border-color: var(--accent); }
   .expand { display: none; position: absolute; z-index: 1000; left: 12px; bottom: 24px; background: var(--panel); padding: 6px 10px; }
   .layers { position: relative; }
   .layers-btn { display: none; }

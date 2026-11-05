@@ -163,7 +163,17 @@ class Store {
     }
   }
 
-  /** Re-resolve the street address for a place's coordinates; the name is left alone. */
+  /**
+   * The address of the building nearest a place's pin, without applying it. That is the nearest building, not
+   * necessarily the right one: a pin on 450 West 17th St can come back as number 434.
+   */
+  async nearestAddress(id: number): Promise<string | null> {
+    const p = this.current?.places.find((x) => x.id === id)
+    if (!p) return null
+    return (await reverse(p.lat, p.lng))?.address ?? null
+  }
+
+  /** Re-resolve and apply the address for a place's coordinates; the name is left alone. Used after a big move. */
   async refreshAddress(id: number) {
     const p = this.current?.places.find((x) => x.id === id)
     if (!p) return false

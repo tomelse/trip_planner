@@ -23,7 +23,9 @@ interface NominatimHit {
 
 function shortName(hit: NominatimHit): string {
   const a = hit.address ?? {}
-  return hit.name || a.city || a.town || a.village || a.suburb || a.county || a.state || a.country || hit.display_name.split(',')[0]
+  // A house or a road has no name of its own; call it by its address, not by the city it is in.
+  const street = [a.house_number, a.road ?? a.pedestrian ?? a.footway].filter(Boolean).join(' ')
+  return hit.name || street || a.city || a.town || a.village || a.suburb || a.county || a.state || a.country || hit.display_name.split(',')[0]
 }
 
 /** "5 Avenue Anatole France, Paris, 75007, France" from Nominatim's structured address. */
@@ -35,9 +37,15 @@ function formatAddress(hit: NominatimHit): string {
   return parts.length > 1 ? parts.join(', ') : hit.display_name
 }
 
-export async function search(q: string): Promise<SearchResult[]> {
-  const res = await fetch(`${base}/search?format=jsonv2&addressdetails=1&limit=6&q=${encodeURIComponent(q)}`)
-  if (!res.ok) return []
+/** West, south, east, north: the part of the world to prefer when a query could mean several places. */
+export type Viewbox = [number, number, number, number]
+
+/** Throws when the search service can't be reached or fails, so "no matches" and "didn't work" stay distinct. */
+export async function search(q: string, viewbox?: Viewbox | null): Promise<SearchResult[]> {
+  // A soft preference (not bounded): results from the current view rank first, but nothing else is excluded.
+  const near = viewbox ? `&viewbox=${viewbox.join(',')}` : ''
+  const res = await fetch(`${base}/search?format=jsonv2&addressdetails=1&limit=6${near}&q=${encodeURIComponent(q)}`)
+  if (!res.ok) throw new Error(`Search failed (${res.status})`)
   const hits: NominatimHit[] = await res.json()
   return hits.map((h) => ({
     name: shortName(h),
