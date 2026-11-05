@@ -33,35 +33,6 @@
   function open() {
     if (next) store.focus.select({ type: next.kind, id: next.id })
   }
-
-  // ---- keep the screen on, e.g. to check a gate or booking reference
-  const canWake = typeof navigator !== 'undefined' && 'wakeLock' in navigator
-  let awake = $state(false)
-  let lock: WakeLockSentinel | null = null
-
-  async function acquire() {
-    try {
-      lock = await navigator.wakeLock.request('screen')
-      lock.addEventListener('release', () => (lock = null))
-    } catch {
-      awake = false // refused (e.g. battery saver)
-    }
-  }
-  const release = () => {
-    lock?.release().catch(() => {})
-    lock = null
-  }
-
-  $effect(() => {
-    if (awake) acquire()
-    return release
-  })
-  // The browser drops the lock whenever the page is hidden; take it again on return.
-  $effect(() => {
-    const back = () => document.visibilityState === 'visible' && awake && !lock && acquire()
-    document.addEventListener('visibilitychange', back)
-    return () => document.removeEventListener('visibilitychange', back)
-  })
 </script>
 
 {#if next && (leg || place)}
@@ -94,11 +65,6 @@
       <button onclick={open}>Details</button>
       {#if leg && dep}<a class="btn" href={directionsUrl(dep[0], dep[1])} target="_blank" rel="noopener">Directions to {leg.from_name || 'start'}</a>
       {:else if place}<a class="btn" href={directionsUrl(place.lat, place.lng)} target="_blank" rel="noopener">Directions</a>{/if}
-      {#if canWake}
-        <button class:on={awake} aria-pressed={awake} onclick={() => (awake = !awake)} title="Stop the screen from turning off while you check details">
-          {awake ? 'Screen stays on' : 'Keep screen on'}
-        </button>
-      {/if}
     </div>
   </div>
 {/if}
@@ -120,5 +86,4 @@
   .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
   .btn { display: inline-block; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; background: transparent; }
   .btn:hover { background: var(--hover); }
-  .actions button.on { color: var(--accent); border-color: var(--accent); }
 </style>

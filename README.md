@@ -24,7 +24,7 @@ On the move:
 - **Directions** on a place, and to the start and end of a leg, opens Google Maps (the Maps app on Android).
 - **My location** (the ◎ button above the zoom buttons) shows a blue dot that follows you while the app is open; **+ Add here** adds where you are as a place. It stops listening while the app is out of sight, and the browser asks for permission the first time.
 - **Addresses:** a place keeps the address it was found with. **Look up** only *suggests* the address of the building nearest the pin (that can be a neighbour: a pin on number 450 can come back as 434), and dragging a pin only replaces its address if you move it more than about 150 m. On a touchscreen a pin only drags once it is open. Search results are ranked towards whatever the map is showing.
-- **Next up** sits at the top of the Itinerary: the leg in progress or the soonest departure or arrival, with a countdown (times are read in the time zone of the place they refer to), the booking reference in large type, and an optional **Keep screen on** switch.
+- **Next up** sits at the top of the Itinerary: the leg in progress or the soonest departure or arrival, with a countdown (times are read in the time zone of the place they refer to), the booking reference in large type.
 
 Publishing to GitHub Pages: push the project to a GitHub repository, then in **Settings → Pages** set the source to **GitHub Actions**. The workflow in `.github/workflows/deploy.yml` builds and deploys on every push to `main`. Only the app's code is published, never your trips.
 
