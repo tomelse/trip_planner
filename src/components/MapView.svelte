@@ -160,8 +160,6 @@
   const legLayers = new Map<number, LegLayers>()
 
   onMount(() => {
-    // A finger moves a few pixels on any tap; don't let that count as dragging a pin (or the map).
-    if (coarse()) (L.Draggable.prototype as unknown as { options: { clickTolerance: number } }).options.clickTolerance = 12
     const m = L.map(el, { zoomControl: false, worldCopyJump: true }).setView([30, 10], 2)
     controls = new MapControls({ onLocate: () => (locate === 'off' ? startLocate() : stopLocate()) }).addTo(m)
     const osm = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -194,10 +192,6 @@
       m.remove()
     }
   })
-
-  const coarse = () => matchMedia('(pointer: coarse)').matches
-  /** Dragging a pin further than this means it now marks a different place, so its address is looked up again. */
-  const FAR_DRAG_M = 150
 
   const NOTES_MAX = 140
 
@@ -272,8 +266,6 @@
       dot?.classList.toggle('hot', hot)
       // A softer halo for the places at the ends of a hovered leg.
       dot?.classList.toggle('near', focus.isRelated(placeRef(p.id)))
-      // On a touchscreen a pin only drags once it is open, so tapping or scrolling past one can't move it.
-      if (coarse()) selected ? pin.marker.dragging?.enable() : pin.marker.dragging?.disable()
       pin.marker.setZIndexOffset(hot ? 2000 : selected ? 1000 : 0)
       pin.marker.setOpacity(!filter || p.category === filter ? 1 : 0.2)
     }
@@ -294,19 +286,10 @@
     for (const p of places) {
       let pin = pins.get(p.id)
       if (!pin) {
-        const marker = L.marker([p.lat, p.lng], { draggable: true, icon: pinIcon(p.color) }).addTo(map)
+        const marker = L.marker([p.lat, p.lng], { draggable: false, icon: pinIcon(p.color) }).addTo(map)
         marker.on('click', () => focus.toggle(placeRef(p.id)))
         marker.on('mouseover', () => focus.hoverRef(placeRef(p.id), 'map'))
         marker.on('mouseout', () => focus.unhoverRef(placeRef(p.id)))
-        let from = marker.getLatLng()
-        marker.on('dragstart', () => (from = marker.getLatLng()))
-        marker.on('dragend', () => {
-          const to = marker.getLatLng()
-          store.patchPlace(p.id, { lat: to.lat, lng: to.lng })
-          // A nudge keeps the address you have (looking up the pin's own spot can give a neighbour's door number);
-          // a long drag moves it to somewhere else, so only then is the address replaced.
-          if (from.distanceTo(to) > FAR_DRAG_M) store.refreshAddress(p.id)
-        })
         marker.bindTooltip(tooltip(p), { direction: 'top', offset: [0, -8] })
         pin = { marker, color: p.color }
         pins.set(p.id, pin)
@@ -471,14 +454,16 @@
     if (pts.length) map.fitBounds(pts, { padding: [60, 60], maxZoom: 12, animate: false })
   })
 
-  // Fly to a place when it is opened, if it is off screen.
+  // Fly to a place when it is opened, or moved (e.g. by finding its address), if it is off screen.
   $effect(() => {
     const sel = focus.selected
     if (!map || sel?.type !== 'place') return
-    const p = untrack(() => store.current?.places.find((x) => x.id === sel.id))
-    if (p && !map.getBounds().pad(-0.15).contains([p.lat, p.lng])) {
-      map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 9), { duration: 0.6 })
-    }
+    const p = store.current?.places.find((x) => x.id === sel.id)
+    if (!p) return
+    const { lat, lng } = p
+    untrack(() => {
+      if (map && !map.getBounds().pad(-0.15).contains([lat, lng])) map.flyTo([lat, lng], Math.max(map.getZoom(), 9), { duration: 0.6 })
+    })
   })
 </script>
 

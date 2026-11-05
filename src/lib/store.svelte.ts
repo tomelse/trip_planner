@@ -173,17 +173,6 @@ class Store {
     return (await reverse(p.lat, p.lng))?.address ?? null
   }
 
-  /** Re-resolve and apply the address for a place's coordinates; the name is left alone. Used after a big move. */
-  async refreshAddress(id: number) {
-    const p = this.current?.places.find((x) => x.id === id)
-    if (!p) return false
-    const { lat, lng } = p
-    const resolved = await reverse(lat, lng)
-    if (!resolved || p.lat !== lat || p.lng !== lng) return false
-    this.patchPlace(id, { address: resolved.address })
-    return true
-  }
-
   patchPlace(id: number, patch: Partial<Place>) {
     const p = this.current?.places.find((x) => x.id === id)
     if (!p) return

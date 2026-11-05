@@ -4,6 +4,8 @@
   import { fmtStay } from '../lib/dates'
   import { CATEGORIES, categoryLabel } from '../lib/categories'
   import { PALETTE } from '../lib/palette'
+  import { search, type SearchResult } from '../lib/geo'
+  import type { Place } from '../lib/types'
   import ChecklistEditor from './ChecklistEditor.svelte'
   import AttachmentList from './AttachmentList.svelte'
   import PlaceDetails from './PlaceDetails.svelte'
@@ -17,16 +19,41 @@
   /** What Look up found, shown for you to accept: it is the nearest building, which can be a neighbour. */
   let suggestion = $state<{ id: number; address: string } | null>(null)
 
+  /** Matches for the address typed into a place: pick one to set the address and move the pin to it. */
+  let finding = $state<number | null>(null)
+  let found = $state<{ id: number; results: SearchResult[]; failed: boolean } | null>(null)
+
+  async function findTyped(p: Place) {
+    const q = p.address.trim()
+    if (!q) return
+    finding = p.id
+    found = suggestion = null
+    try {
+      // Prefer matches near where the pin already is, so "17th St" means the one in this trip's city.
+      const near: [number, number, number, number] = [p.lng - 0.3, p.lat - 0.3, p.lng + 0.3, p.lat + 0.3]
+      found = { id: p.id, results: await search(q, near), failed: false }
+    } catch {
+      found = { id: p.id, results: [], failed: true }
+    }
+    finding = null
+  }
+
+  function useResult(p: Place, r: SearchResult) {
+    store.patchPlace(p.id, { address: r.address, lat: r.lat, lng: r.lng })
+    found = null
+  }
+
   async function lookup(id: number) {
     looking = id
     suggestion = null
-    const found = await store.nearestAddress(id)
+    found = null
+    const nearest = await store.nearestAddress(id)
     looking = null
     const current = store.current?.places.find((p) => p.id === id)?.address.trim()
-    if (found === null) store.notify('Could not look up an address for this pin.')
-    else if (!current) store.patchPlace(id, { address: found }) // nothing to lose
-    else if (found === current) store.notify('That already matches the map.')
-    else suggestion = { id, address: found }
+    if (nearest === null) store.notify('Could not look up an address for this pin.')
+    else if (!current) store.patchPlace(id, { address: nearest }) // nothing to lose
+    else if (nearest === current) store.notify('That already matches the map.')
+    else suggestion = { id, address: nearest }
   }
 
   const places = $derived(store.current?.places ?? [])
@@ -137,12 +164,43 @@
           </div>
           <label class="field">Address
             <div class="addr">
-              <input placeholder="Street address" value={p.address} oninput={(e) => store.patchPlace(p.id, { address: e.currentTarget.value })} />
-              <button class="ghost" disabled={looking === p.id} onclick={() => lookup(p.id)} title="Look up the address for this pin">
-                {looking === p.id ? '…' : 'Look up'}
+              <input
+                placeholder="Type an address, then Find"
+                value={p.address}
+                oninput={(e) => store.patchPlace(p.id, { address: e.currentTarget.value })}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    findTyped(p)
+                  }
+                }}
+              />
+              <button class="ghost" disabled={finding === p.id || !p.address.trim()} onclick={() => findTyped(p)} title="Search the map for this address and move the pin to it">
+                {finding === p.id ? '…' : 'Find'}
+              </button>
+              <button class="ghost" disabled={looking === p.id} onclick={() => lookup(p.id)} title="Show the address of the building nearest the pin">
+                {looking === p.id ? '…' : 'From pin'}
               </button>
             </div>
           </label>
+          {#if found?.id === p.id}
+            <div class="sugg">
+              {#if found.results.length}
+                <p class="note">Pick the right match. This moves the pin to it.</p>
+                <div class="matches">
+                  {#each found.results as r}
+                    <button class="match" onclick={() => useResult(p, r)}>
+                      <strong>{r.address}</strong>
+                      <small>{r.detail}</small>
+                    </button>
+                  {/each}
+                </div>
+              {:else}
+                <p class="note">{found.failed ? 'Could not reach the search service. Try again in a moment.' : 'No matches. Try adding the city, or a fuller street name.'}</p>
+              {/if}
+              <div class="acts"><button class="ghost" onclick={() => (found = null)}>Close</button></div>
+            </div>
+          {/if}
           {#if suggestion?.id === p.id}
             <div class="sugg">
               <p>Nearest address on the map: <strong>{suggestion.address}</strong></p>
@@ -210,6 +268,9 @@
   .sugg { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; }
   .sugg p { margin: 0; overflow-wrap: anywhere; }
   .sugg .note { font-size: 12px; color: var(--ink-3); }
+  .matches { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); padding: 2px; }
+  .match { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; border: none; text-align: left; }
+  .match small { color: var(--ink-2); font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .addr, .move { display: flex; gap: 4px; }
   .move button { flex: 1; white-space: nowrap; }
   .addr button { white-space: nowrap; }
