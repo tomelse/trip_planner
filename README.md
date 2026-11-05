@@ -20,6 +20,11 @@ Android extras (installed app only; a desktop browser is unaffected):
 - Text on buttons and tabs isn't selectable by long-press on touchscreens (inputs and notes still are).
 - After a new release, Android can take a day or so to update an installed app's shortcuts and share entry; reinstalling picks them up immediately.
 
+On the move:
+- **Directions** on a place, and to the start and end of a leg, opens Google Maps (the Maps app on Android).
+- **My location** (the ◎ button above the zoom buttons) shows a blue dot that follows you while the app is open; **+ Add here** adds where you are as a place. It stops listening while the app is out of sight, and the browser asks for permission the first time.
+- **Next up** sits at the top of the Itinerary: the leg in progress or the soonest departure or arrival, with a countdown (times are read in the time zone of the place they refer to), the booking reference in large type, and an optional **Keep screen on** switch.
+
 Publishing to GitHub Pages: push the project to a GitHub repository, then in **Settings → Pages** set the source to **GitHub Actions**. The workflow in `.github/workflows/deploy.yml` builds and deploys on every push to `main`. Only the app's code is published, never your trips.
 
 ## Your data

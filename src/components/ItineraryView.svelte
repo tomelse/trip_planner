@@ -4,6 +4,7 @@
   import { fmt, iso } from '../lib/dates'
   import { legTitle, modeLabel } from '../lib/legs'
   import { buildItinerary } from '../lib/itinerary'
+  import NextUpCard from './NextUpCard.svelte'
 
   const itin = $derived(buildItinerary(store.current!))
   const today = iso(new Date())
@@ -20,6 +21,7 @@
 </script>
 
 <div bind:this={root} class="agenda">
+  <NextUpCard />
   {#each itin.days as d (d.day)}
     <section data-day={d.day} class:today={d.day === today} class:past={d.day < today}>
       <h3>
@@ -78,7 +80,7 @@
     /* scrollIntoView stops short by this much, so a day lands just under the sticky Month | Itinerary bar. */
     scroll-margin-top: calc(var(--sticky-top, 0px) + var(--viewbar-h));
   }
-  section:first-child { border-top: none; }
+  section:first-of-type { border-top: none; }
   section.past { opacity: 0.55; }
   h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 14px; font-weight: 600; }
   .dnum { font-size: 22px; font-weight: 500; width: 30px; text-align: right; font-variant-numeric: tabular-nums; }

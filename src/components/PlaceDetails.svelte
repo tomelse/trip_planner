@@ -2,6 +2,7 @@
   import { store } from '../lib/store.svelte'
   import { fmtStay } from '../lib/dates'
   import { categoryLabel } from '../lib/categories'
+  import { directionsUrl } from '../lib/maps'
   import type { Place } from '../lib/types'
   import ChecklistEditor from './ChecklistEditor.svelte'
   import AttachmentList from './AttachmentList.svelte'
@@ -24,7 +25,10 @@
   <AttachmentList placeId={place.id} editable={false} />
   <div class="foot">
     <span class="coords">{place.lat.toFixed(4)}, {place.lng.toFixed(4)}</span>
-    <button onclick={() => store.focus.startEdit({ type: 'place', id: place.id })}>Edit</button>
+    <span class="acts">
+      <a class="btn" href={directionsUrl(place.lat, place.lng)} target="_blank" rel="noopener">Directions</a>
+      <button onclick={() => store.focus.startEdit({ type: 'place', id: place.id })}>Edit</button>
+    </span>
   </div>
 </div>
 
@@ -39,5 +43,8 @@
   .issue { font-size: 12px; color: var(--warn); }
   .issue.err { color: var(--danger); }
   .foot { display: flex; justify-content: space-between; align-items: center; }
+  .acts { display: flex; gap: 6px; align-items: center; }
+  .btn { display: inline-block; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; }
+  .btn:hover { background: var(--hover); }
   .coords { color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
 </style>

@@ -33,6 +33,87 @@
     } catch {}
   })
   let fittedTrip = -1
+
+  // ---- My location: a blue dot that follows you, and a button to add where you are as a place.
+  type Locate = 'off' | 'finding' | 'on'
+  let locate = $state<Locate>('off')
+  let fix = $state<{ lat: number; lng: number } | null>(null)
+  let watchId: number | null = null
+  let meDot: L.CircleMarker | undefined
+  let meAccuracy: L.Circle | undefined
+  let centreOnNextFix = true
+
+  function onFix(pos: GeolocationPosition) {
+    const { latitude: lat, longitude: lng, accuracy } = pos.coords
+    fix = { lat, lng }
+    locate = 'on'
+    if (!map) return
+    if (!meDot || !meAccuracy) {
+      meAccuracy = L.circle([lat, lng], { radius: accuracy, className: 'me-acc', interactive: false }).addTo(map)
+      meDot = L.circleMarker([lat, lng], { radius: 8, className: 'me-dot', interactive: false }).addTo(map)
+    } else {
+      meAccuracy.setLatLng([lat, lng]).setRadius(accuracy)
+      meDot.setLatLng([lat, lng])
+    }
+    // Zoom to you on the first fix only; after that the dot moves but the map stays where you put it.
+    if (centreOnNextFix) {
+      centreOnNextFix = false
+      map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6 })
+    }
+  }
+
+  function onLocateError(err: GeolocationPositionError) {
+    stopLocate()
+    store.notify(
+      err.code === err.PERMISSION_DENIED
+        ? 'Location is blocked for this site. Allow it in your browser’s site settings.'
+        : err.code === err.TIMEOUT
+          ? 'Finding your location timed out. Try again outdoors or with a better signal.'
+          : 'Could not work out your location.',
+    )
+  }
+
+  const watch = () =>
+    (watchId = navigator.geolocation.watchPosition(onFix, onLocateError, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 20000,
+    }))
+
+  function startLocate() {
+    if (!('geolocation' in navigator)) return store.notify('This browser can’t share your location.')
+    locate = 'finding'
+    centreOnNextFix = true
+    watch()
+  }
+
+  function stopLocate() {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId)
+    watchId = null
+    meDot?.remove()
+    meAccuracy?.remove()
+    meDot = meAccuracy = undefined
+    fix = null
+    locate = 'off'
+  }
+
+  function addHere() {
+    if (!fix) return
+    if (!store.current) return store.notify('Create a trip first.')
+    store.addPlace(fix.lat, fix.lng)
+  }
+
+  // GPS drains the battery, so stop listening while the app is out of sight and resume when it is back.
+  $effect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId)
+        watchId = null
+      } else if (locate !== 'off' && watchId === null) watch()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  })
   let layersEl: HTMLDivElement | undefined = $state()
 
   type Base = 'standard' | 'transit'
@@ -91,6 +172,7 @@
     ro.observe(el)
     map = m
     return () => {
+      stopLocate()
       ro.disconnect()
       m.remove()
     }
@@ -398,6 +480,17 @@
       </div>
     </div>
   </div>
+  <div class="locate">
+    {#if fix}<button class="here" onclick={addHere} title="Add your current position as a place">+ Add here</button>{/if}
+    <button
+      class="loc"
+      class:on={locate !== 'off'}
+      aria-pressed={locate !== 'off'}
+      aria-label="Show my location"
+      title={locate === 'off' ? 'Show my location' : 'Hide my location'}
+      onclick={() => (locate === 'off' ? startLocate() : stopLocate())}
+    >{locate === 'finding' ? '…' : '◎'}</button>
+  </div>
   <button class="expand" onclick={() => (store.mapExpanded = !store.mapExpanded)}>
     {store.mapExpanded ? 'Show plan' : 'Bigger map'}
   </button>
@@ -410,6 +503,11 @@
   .map.pinning :global(.leaflet-dragging) { cursor: grabbing; }
   .overlay { position: absolute; z-index: 1000; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none; }
   .overlay > :global(*) { pointer-events: auto; }
+  /* Above Leaflet's zoom buttons (bottom right). */
+  .locate { position: absolute; z-index: 1000; right: 10px; bottom: 84px; display: flex; gap: 6px; align-items: center; }
+  .locate button { background: var(--panel); }
+  .loc { width: 34px; height: 34px; padding: 0; font-size: 18px; line-height: 1; color: var(--ink-2); }
+  .loc.on { color: var(--accent); border-color: var(--accent); }
   .expand { display: none; position: absolute; z-index: 1000; left: 12px; bottom: 24px; background: var(--panel); padding: 6px 10px; }
   .layers { position: relative; }
   .layers-btn { display: none; }
