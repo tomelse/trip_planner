@@ -18,7 +18,7 @@ Publishing to GitHub Pages: push the project to a GitHub repository, then in **S
 
 ## Your data
 
-- Data lives in the browser's storage for each address, so `localhost`, the Pages site and each device are separate. Use **⋯ → Export / Import backup** (next to the trip picker) to move trips between them. Importing always adds new trips; it never overwrites.
+- Data lives in the browser's storage for each address, so `localhost`, the Pages site and each device are separate. Use the trip menu at the top of the map (the trip name) → **Backup & import…** to move trips between them. Importing always adds new trips; it never overwrites.
 - A backup is a `.zip` with the trips as JSON and the attached files. Export now and then: clearing a browser's site data deletes the trips.
 - Deleting something hides it for 30 days so it can be undone (the toast, or Cmd/Ctrl+Z). After that it is purged on the next start.
 - Time zones are looked up offline from coordinates ([tz-lookup](https://github.com/photostructure/tz-lookup)) and can be overridden per leg end.
@@ -30,6 +30,6 @@ Earlier versions kept data in `data/trips.db` behind a small server. To bring it
 
 ## Interaction
 
-Hover and selection are handled in one place (`src/lib/focus.svelte.ts`). Hovering a row, pin, line or airport marker lights up everything that stands for it (and the things linked to it); clicking opens the place or leg and shows its tab; clicking it again, clicking empty map, or pressing Esc closes it. Pin dropping starts off ("Drop pins" on the map) and then remembers your last choice. Below 820px the map sits above the plan, with a "Bigger map" toggle.
+Hover and selection are handled in one place (`src/lib/focus.svelte.ts`). Hovering a row, pin, line or airport marker lights up everything that stands for it (and the things linked to it); clicking opens the place or leg and shows its tab; clicking it again, clicking empty map, or pressing Esc closes it. The trip menu at the top of the map switches trips and opens New trip / Trip details; deleting a trip is only offered inside Trip details, and asks you to type the trip's name when it has content. Pin dropping starts off ("Drop pins" on the map) and then remembers your last choice. Below 820px the map sits above the plan, with a "Bigger map" toggle.
 
 Map data © OpenStreetMap contributors; transit map by [memomaps.de](https://memomaps.de) (ÖPNVKarte); rail overlay by [OpenRailwayMap](https://www.openrailwaymap.org).

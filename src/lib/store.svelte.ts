@@ -22,6 +22,8 @@ class Store {
   tab = $state<Tab>('places')
   /** Narrow screens only: give the map most of the height instead of the list. */
   mapExpanded = $state(false)
+  /** The new-trip / trip-details dialog, when open. */
+  tripDialog = $state<'new' | 'edit' | null>(null)
   error = $state<string | null>(null)
   /** Category chip selected in the Places tab; hides other places in the list and dims them on the map. */
   categoryFilter = $state<string | null>(null)
@@ -60,8 +62,8 @@ class Store {
     } catch {}
   }
 
-  async createTrip(name: string) {
-    const trip = await api.createTrip({ name: name.trim() || 'Untitled trip' })
+  async createTrip(name: string, start_date: string | null = null, end_date: string | null = null) {
+    const trip = await api.createTrip({ name: name.trim() || 'Untitled trip', start_date, end_date })
     this.trips = [trip, ...this.trips]
     await this.openTrip(trip.id)
   }

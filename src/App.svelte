@@ -3,6 +3,7 @@
   import Sidebar from './components/Sidebar.svelte'
   import MapView from './components/MapView.svelte'
   import Toast from './components/Toast.svelte'
+  import TripDialog from './components/TripDialog.svelte'
   import { store } from './lib/store.svelte'
 
   onMount(() => store.init())
@@ -11,6 +12,8 @@
     !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 
   function onkeydown(e: KeyboardEvent) {
+    // A dialog handles its own keys (Esc cancels it); don't also close what is open behind it.
+    if (document.querySelector('dialog[open]')) return
     if (typing(e.target as HTMLElement | null)) return
     // Cmd/Ctrl+Z undoes the last delete (in a text field it keeps undoing text instead).
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && store.toast?.undo && store.toast.label === 'Undo') {
@@ -28,6 +31,7 @@
   <Sidebar />
   <MapView />
 </main>
+<TripDialog />
 <Toast />
 
 <style>

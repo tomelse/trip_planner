@@ -8,6 +8,7 @@
   import { endpoint, legBends, legTitle, modeLabel } from '../lib/legs'
   import { arcArrow, arcPoints } from '../lib/arc'
   import SearchBox from './SearchBox.svelte'
+  import TripBar from './TripBar.svelte'
 
   const focus = store.focus
   const placeRef = (id: number): Ref => ({ type: 'place', id })
@@ -32,6 +33,9 @@
     } catch {}
   })
   let fittedTrip = -1
+  // Narrow screens fold the map switches into one menu; this is whether it is showing.
+  let layersOpen = $state(false)
+  let layersEl: HTMLDivElement | undefined = $state()
 
   type Base = 'standard' | 'transit'
   const LAYERS_KEY = 'trips:layers'
@@ -371,22 +375,30 @@
   })
 </script>
 
+<svelte:window onclick={(e) => layersOpen && layersEl && !layersEl.contains(e.target as Node) && (layersOpen = false)} />
+
 <section>
   <div bind:this={el} class="map" class:pinning={pinMode}></div>
   <div class="overlay">
+    <TripBar />
     <SearchBox
       onpick={(r) => {
         map?.flyTo([r.lat, r.lng], 11, { duration: 0.8 })
         if (store.current) store.addPlace(r.lat, r.lng, r.name, r.address)
       }}
     />
-    <button class:on={pinMode} onclick={() => (pinMode = !pinMode)} title="When on, clicking or tapping the map drops a pin">
-      {pinMode ? 'Drop pins: on' : 'Drop pins: off'}
-    </button>
-    <button class:on={base === 'transit'} onclick={() => (base = base === 'transit' ? 'standard' : 'transit')} title="Show public transport lines">
-      Transit
-    </button>
-    <button class:on={rail} onclick={() => (rail = !rail)} title="Overlay railway lines">Rail</button>
+    <div class="layers" bind:this={layersEl}>
+      <button class="layers-btn" aria-expanded={layersOpen} onclick={() => (layersOpen = !layersOpen)}>Map ▾</button>
+      <div class="toggles" class:open={layersOpen}>
+        <button class:on={pinMode} onclick={() => (pinMode = !pinMode)} title="When on, clicking or tapping the map drops a pin">
+          {pinMode ? 'Drop pins: on' : 'Drop pins: off'}
+        </button>
+        <button class:on={base === 'transit'} onclick={() => (base = base === 'transit' ? 'standard' : 'transit')} title="Show public transport lines">
+          Transit
+        </button>
+        <button class:on={rail} onclick={() => (rail = !rail)} title="Overlay railway lines">Rail</button>
+      </div>
+    </div>
   </div>
   <button class="expand" onclick={() => (store.mapExpanded = !store.mapExpanded)}>
     {store.mapExpanded ? 'Show plan' : 'Bigger map'}
@@ -401,10 +413,22 @@
   .overlay { position: absolute; z-index: 1000; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none; }
   .overlay > :global(*) { pointer-events: auto; }
   .expand { display: none; position: absolute; z-index: 1000; left: 12px; bottom: 24px; background: var(--panel); padding: 6px 10px; }
+  .layers { position: relative; }
+  .layers-btn { display: none; }
+  .toggles { display: flex; gap: 8px; }
   @media (max-width: 820px) {
     .expand { display: block; }
     .overlay { top: 8px; left: 8px; right: 8px; gap: 6px; }
     .overlay button { padding: 6px 8px; }
+    /* One "Map" button instead of three, so the top of a short map isn't all buttons. */
+    .layers { margin-left: auto; }
+    .layers-btn { display: block; }
+    .toggles {
+      display: none; position: absolute; z-index: 2000; top: calc(100% + 6px); right: 0;
+      flex-direction: column; gap: 4px; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    }
+    .toggles.open { display: flex; }
+    .toggles button { text-align: left; white-space: nowrap; }
   }
   .overlay button { background: var(--panel); padding: 8px 10px; color: var(--ink-2); }
   .overlay button.on { color: var(--accent); border-color: var(--accent); }

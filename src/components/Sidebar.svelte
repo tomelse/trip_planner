@@ -1,7 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import { store, type Tab } from '../lib/store.svelte'
-  import TripPicker from './TripPicker.svelte'
   import IssuesBanner from './IssuesBanner.svelte'
   import PlaceList from './PlaceList.svelte'
   import TravelList from './TravelList.svelte'
@@ -24,7 +23,6 @@
 </script>
 
 <aside>
-  <TripPicker />
   {#if store.error}
     <p class="error">{store.error}</p>
   {/if}
@@ -47,7 +45,11 @@
       {#if store.tab === 'notes'}<NotesPanel />{/if}
     </div>
   {:else if !store.error}
-    <p class="empty">Create a trip to start pinning places.</p>
+    <div class="empty">
+      <p>No trip open.</p>
+      <button class="primary" onclick={() => (store.tripDialog = 'new')}>Create your first trip</button>
+      <p class="hint">Or use the trip menu on the map to import a backup.</p>
+    </div>
   {/if}
 </aside>
 
@@ -72,5 +74,8 @@
     nav { position: sticky; top: 0; z-index: 2; background: var(--panel); }
   }
   .empty, .error { padding: 16px; color: var(--ink-2); margin: 0; }
+  .empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .empty p { margin: 0; }
+  .hint { font-size: 12px; color: var(--ink-3); }
   .error { color: var(--danger); }
 </style>

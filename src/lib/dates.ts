@@ -34,3 +34,13 @@ export function fmtStay(a: string | null, at: string | null, d: string | null, d
   if (!d || d === a) return fmtWhen(a, at) + (d === a && dt ? ` – ${dt}` : '')
   return `${fmtWhen(a, at)} – ${fmtWhen(d, dt)}`
 }
+
+/** "12 Mar – 19 Mar 2026", "From 12 Mar 2026", or '' when the trip has no dates. */
+export function fmtTripDates(start: string | null, end: string | null) {
+  const short: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  const full: Intl.DateTimeFormatOptions = { ...short, year: 'numeric' }
+  if (start && end) return `${fmt(start, short)} – ${fmt(end, full)}`
+  if (start) return `From ${fmt(start, full)}`
+  if (end) return `Until ${fmt(end, full)}`
+  return ''
+}
