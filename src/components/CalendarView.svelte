@@ -1,5 +1,6 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
+  import { clock } from '../lib/clock.svelte'
   import { hoverable } from '../lib/hoverable'
   import { addDays, dayDiff, fmt, fmtStay, iso, parse, stayRange } from '../lib/dates'
   import { dayOffset, legTitle, modeLabel } from '../lib/legs'
@@ -25,7 +26,7 @@
   }
 
   const detail = $derived(store.current!)
-  const todayIso = iso(new Date())
+  const todayIso = $derived(clock.today)
 
   let cursor = $state(startOfMonth(new Date()))
   let selectedDay = $state<string | null>(null)

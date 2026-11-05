@@ -2,14 +2,15 @@
   --bg: #fafaf8;
   --panel: #ffffff;
   --ink: #1c1c1a;
-  --ink-2: #6b6b66;
-  --ink-3: #a3a39d;
+  /* Muted text: both clear 4.5:1 (WCAG AA) on the page, panel and hover backgrounds. */
+  --ink-2: #55554f;
+  --ink-3: #6b6b66;
   --line: #e6e6e1;
   --hover: #f2f2ee;
   --accent: #0f766e;
   --accent-soft: #e3f1ef;
   --danger: #b4372b;
-  --warn: #b45309;
+  --warn: #a84a08;
   --travel: #475569;
   --travel-soft: #e8ebf0;
   --radius: 6px;
@@ -27,8 +28,8 @@
     --bg: #161615;
     --panel: #1d1d1b;
     --ink: #ecece8;
-    --ink-2: #9b9b94;
-    --ink-3: #66665f;
+    --ink-2: #a8a8a1;
+    --ink-3: #90908a;
     --line: #2c2c29;
     --hover: #262624;
     --accent: #3fb2a6;
@@ -159,4 +160,9 @@ path.leaflet-interactive { outline: none; -webkit-tap-highlight-color: transpare
   input, textarea, select, .notes, .addr, .details p { -webkit-user-select: text; user-select: text; }
   /* No double-tap-to-zoom delay or grey tap flash on controls. */
   button, input, select, textarea, label, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+}
+
+/* People who ask their device for less motion get none from the app. */
+@media (prefers-reduced-motion: reduce) {
+  .pin { transition: none; }
 }

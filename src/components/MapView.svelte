@@ -62,7 +62,7 @@
     // Zoom to you on the first fix only; after that the dot moves but the map stays where you put it.
     if (centreOnNextFix) {
       centreOnNextFix = false
-      map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6 })
+      map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6, animate: !reduceMotion() })
     }
   }
 
@@ -161,7 +161,8 @@
   const legLayers = new Map<number, LegLayers>()
 
   onMount(() => {
-    const m = L.map(el, { zoomControl: false, worldCopyJump: true }).setView([30, 10], 2)
+    const calm = reduceMotion()
+    const m = L.map(el, { zoomControl: false, worldCopyJump: true, zoomAnimation: !calm, fadeAnimation: !calm, markerZoomAnimation: !calm }).setView([30, 10], 2)
     controls = new MapControls({ onLocate: () => (locate === 'off' ? startLocate() : stopLocate()) }).addTo(m)
     const osm = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     baseLayers = {
@@ -193,6 +194,9 @@
       m.remove()
     }
   })
+
+  /** Whether the device asks for less motion; checked when used, so changing the setting takes effect at once. */
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
   const NOTES_MAX = 140
 
@@ -466,7 +470,7 @@
     if (!p) return
     const { lat, lng } = p
     untrack(() => {
-      if (map && !map.getBounds().pad(-0.15).contains([lat, lng])) map.flyTo([lat, lng], Math.max(map.getZoom(), 9), { duration: 0.6 })
+      if (map && !map.getBounds().pad(-0.15).contains([lat, lng])) map.flyTo([lat, lng], Math.max(map.getZoom(), 9), { duration: 0.6, animate: !reduceMotion() })
     })
   })
 </script>
@@ -483,7 +487,7 @@
         return b ? [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] : null
       }}
       onpick={(r) => {
-        map?.flyTo([r.lat, r.lng], 11, { duration: 0.8 })
+        map?.flyTo([r.lat, r.lng], 11, { duration: 0.8, animate: !reduceMotion() })
         if (store.current) store.addPlace(r.lat, r.lng, r.name, r.address)
       }}
     />

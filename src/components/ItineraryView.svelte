@@ -2,13 +2,14 @@
   import { store } from '../lib/store.svelte'
   import { hoverable } from '../lib/hoverable'
   import { scrollWithin } from '../lib/scroll'
-  import { fmt, iso } from '../lib/dates'
+  import { fmt } from '../lib/dates'
+  import { clock } from '../lib/clock.svelte'
   import { legTitle, modeLabel } from '../lib/legs'
   import { buildItinerary } from '../lib/itinerary'
   import NextUpCard from './NextUpCard.svelte'
 
   const itin = $derived(buildItinerary(store.current!))
-  const today = iso(new Date())
+  const today = $derived(clock.today)
   const nextDay = $derived(itin.days.find((d) => d.day >= today)?.day)
 
   let root: HTMLDivElement | undefined = $state()
