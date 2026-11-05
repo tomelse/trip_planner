@@ -39,17 +39,51 @@ const WRITABLE: Record<Table, string[]> = {
 export const MAX_FILE = 50 * 1024 * 1024
 /** Only these are ever displayed inline; everything else is downloaded, never rendered by the browser. */
 export const INLINE_IMAGES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif']
+/** Remove a trip and everything in it for good (not the undoable delete): used to undo a half-finished import. */
+export async function discardTrip(tripId: number) {
+  const db = await getDb()
+  const tx = db.transaction([...TABLES, 'blobs'], 'readwrite')
+  for (const t of ['places', 'legs', 'notes', 'items', 'attachments'] as const) {
+    const store = tx.objectStore(t)
+    for (const key of await store.index('trip_id').getAllKeys(tripId)) {
+      await store.delete(key)
+      if (t === 'attachments') await tx.objectStore('blobs').delete(key as number)
+    }
+  }
+  await tx.objectStore('trips').delete(tripId)
+  await tx.done
+}
+
 const PURGE_AFTER_DAYS = 30
+
+/**
+ * Schema changes, in order. Entry N upgrades a database from version N to N+1, and the database version is how many
+ * there are, so a device on any older version runs exactly the steps it is missing. Never edit a step that has
+ * shipped: add a new one.
+ */
+const MIGRATIONS: ((db: IDBPDatabase) => void)[] = [
+  // 1: the original schema
+  (db) => {
+    for (const t of TABLES) {
+      const store = db.createObjectStore(t, { keyPath: 'id', autoIncrement: true })
+      if (t !== 'trips') store.createIndex('trip_id', 'trip_id')
+    }
+    db.createObjectStore('blobs') // attachment id -> Blob
+  },
+]
 
 let dbPromise: Promise<IDBPDatabase> | undefined
 function getDb() {
-  dbPromise ??= openDB('trip-planner', 1, {
-    upgrade(db) {
-      for (const t of TABLES) {
-        const store = db.createObjectStore(t, { keyPath: 'id', autoIncrement: true })
-        if (t !== 'trips') store.createIndex('trip_id', 'trip_id')
-      }
-      db.createObjectStore('blobs') // attachment id -> Blob
+  dbPromise ??= openDB('trip-planner', MIGRATIONS.length, {
+    upgrade(db, oldVersion) {
+      for (let v = oldVersion; v < MIGRATIONS.length; v++) MIGRATIONS[v](db)
+    },
+    // Another window of the app (a newer version) wants to upgrade the database. Step aside so it can, and say so.
+    blocking() {
+      const stale = dbPromise
+      dbPromise = undefined
+      stale?.then((d) => d.close())
+      globalThis.dispatchEvent?.(new Event('trip-db-outdated'))
     },
   })
   return dbPromise

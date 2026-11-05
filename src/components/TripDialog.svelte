@@ -53,7 +53,7 @@
       if (mode === 'new') await store.createTrip(name, start || null, end || null)
       else {
         store.patchTrip({ name: name.trim(), start_date: start || null, end_date: end || null })
-        await store.saveNow()
+        await store.flush()
       }
       store.tripDialog = null
     } finally {

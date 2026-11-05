@@ -12,6 +12,15 @@ export type Tab = 'places' | 'travel' | 'calendar' | 'notes'
 
 const LAST_TRIP_KEY = 'trips:last'
 
+type SaveKind = 'trip' | 'place' | 'note' | 'leg' | 'item'
+const SAVE: Record<SaveKind, (id: number, patch: never) => Promise<unknown>> = {
+  trip: (id, patch) => api.patchTrip(id, patch),
+  place: (id, patch) => api.patchPlace(id, patch),
+  note: (id, patch) => api.patchNote(id, patch),
+  leg: (id, patch) => api.patchLeg(id, patch),
+  item: (id, patch) => api.patchItem(id, patch),
+}
+
 class Store {
   trips = $state<Trip[]>([])
   current = $state<TripDetail | null>(null)
@@ -80,7 +89,7 @@ class Store {
     Object.assign(t, patch)
     const i = this.trips.findIndex((x) => x.id === t.id)
     if (i >= 0) Object.assign(this.trips[i], patch)
-    this.queue('trip', t.id, patch, (id, p) => api.patchTrip(id, p))
+    this.queue('trip', t.id, patch)
   }
 
   async deleteTrip() {
@@ -104,11 +113,6 @@ class Store {
     this.toast = { message, undo, label }
     // Undo is time-boxed; the update prompt stays longer, and is offered again when the app next comes into view.
     this.toastTimer = setTimeout(() => (this.toast = null), !undo ? 5_000 : label === 'Undo' ? 10_000 : 30_000)
-  }
-
-  /** Write any edits still waiting on the typing delay, e.g. before exporting. */
-  async saveNow() {
-    await this.flush()
   }
 
   /** After importing a backup: refresh the trip list and open the first trip that came in. */
@@ -177,7 +181,7 @@ class Store {
     const p = this.current?.places.find((x) => x.id === id)
     if (!p) return
     Object.assign(p, patch)
-    this.queue('place', id, patch, (i, d) => api.patchPlace(i, d))
+    this.queue('place', id, patch)
   }
 
   async deletePlace(id: number) {
@@ -228,7 +232,7 @@ class Store {
     const n = this.current?.notes.find((x) => x.id === id)
     if (!n) return
     Object.assign(n, patch)
-    this.queue('note', id, patch, (i, d) => api.patchNote(i, d))
+    this.queue('note', id, patch)
   }
 
   async deleteNote(id: number) {
@@ -260,7 +264,7 @@ class Store {
     const l = this.current?.legs.find((x) => x.id === id)
     if (!l) return
     Object.assign(l, patch)
-    this.queue('leg', id, patch, (i, d) => api.patchLeg(i, d))
+    this.queue('leg', id, patch)
   }
 
   async deleteLeg(id: number) {
@@ -289,7 +293,7 @@ class Store {
     const i = this.current?.items.find((x) => x.id === id)
     if (!i) return
     Object.assign(i, patch)
-    this.queue('item', id, patch, (n, d) => api.patchItem(n, d))
+    this.queue('item', id, patch)
   }
 
   async deleteItem(id: number) {
@@ -322,34 +326,52 @@ class Store {
     this.notify(`Removed ${a?.name ?? 'file'}`, () => this.restoreAndReload('attachments', id))
   }
 
-  /** Debounced, merged PATCH per entity so typing doesn't hammer the API. */
-  private queue<T extends object>(kind: string, id: number, patch: T, send: (id: number, p: T) => Promise<unknown>) {
+  /** Debounced, merged saves per entity, so typing doesn't write on every keystroke. */
+  private queue(kind: SaveKind, id: number, patch: object) {
     const key = `${kind}:${id}`
     this.pending.set(key, { ...this.pending.get(key), ...patch })
     clearTimeout(this.timers.get(key))
     this.timers.set(
       key,
-      setTimeout(() => this.run(key, id, send), 400),
+      setTimeout(() => {
+        this.timers.delete(key)
+        void this.persist([key])
+      }, 400),
     )
   }
 
-  private async run<T>(key: string, id: number, send: (id: number, p: T) => Promise<unknown>) {
-    const patch = this.pending.get(key)
-    this.pending.delete(key)
-    this.timers.delete(key)
-    if (patch) await send(id, patch as T).catch((e) => (this.error = String(e)))
+  /**
+   * Write the waiting edits for these entities. An edit that fails to save stays queued (so the next save, switching
+   * trips, or the app being hidden tries again) and you are told, instead of it quietly disappearing.
+   */
+  private async persist(keys: string[]) {
+    const jobs = keys.flatMap((key) => {
+      const patch = this.pending.get(key)
+      if (!patch) return []
+      this.pending.delete(key)
+      return [{ key, patch }]
+    })
+    const results = await Promise.allSettled(
+      jobs.map(({ key, patch }) => {
+        const [kind, id] = key.split(':')
+        return SAVE[kind as SaveKind](Number(id), patch as never)
+      }),
+    )
+    let failed = false
+    results.forEach((r, i) => {
+      if (r.status !== 'rejected') return
+      failed = true
+      const { key, patch } = jobs[i]
+      this.pending.set(key, { ...patch, ...this.pending.get(key) }) // anything typed since wins over the failed attempt
+    })
+    if (failed) this.notify('Couldn’t save your last change. It will try again. Is your device out of storage?')
   }
 
-  private async flush() {
+  /** Save everything waiting right now (when switching trips, exporting, or the app is hidden). */
+  async flush() {
     for (const t of this.timers.values()) clearTimeout(t)
     this.timers.clear()
-    const jobs = [...this.pending.entries()].map(([key, patch]) => {
-      const [kind, id] = key.split(':')
-      const fn = { trip: api.patchTrip, place: api.patchPlace, note: api.patchNote, leg: api.patchLeg, item: api.patchItem }[kind as 'trip']
-      return (fn as (id: number, p: unknown) => Promise<unknown>)(Number(id), patch)
-    })
-    this.pending.clear()
-    await Promise.allSettled(jobs)
+    await this.persist([...this.pending.keys()])
   }
 }
 

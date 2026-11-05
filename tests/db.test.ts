@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { freshDb } from './helpers'
 
 let db: Awaited<ReturnType<typeof freshDb>>['db']
@@ -108,5 +108,29 @@ describe('purge', () => {
     expect(await raw.getAllFromIndex('attachments', 'trip_id', tid)).toHaveLength(0)
     expect(await raw.getAllKeys('blobs')).toHaveLength(0)
     expect(await raw.get('places', keep.id)).toBeDefined() // a recent delete is still undoable
+  })
+})
+
+describe('upgrading a database from an earlier version of the app', () => {
+  it('opens a version-1 database as it was first written, and keeps its data', async () => {
+    const { IDBFactory } = await import('fake-indexeddb')
+    const { openDB } = await import('idb')
+    globalThis.indexedDB = new IDBFactory()
+    // What the very first release created, written without going through the current code.
+    const old = await openDB('trip-planner', 1, {
+      upgrade(d) {
+        for (const t of ['trips', 'places', 'notes', 'legs', 'items', 'attachments']) {
+          const s = d.createObjectStore(t, { keyPath: 'id', autoIncrement: true })
+          if (t !== 'trips') s.createIndex('trip_id', 'trip_id')
+        }
+        d.createObjectStore('blobs')
+      },
+    })
+    await old.add('trips', { name: 'From v1', created_at: '2026-01-01 00:00:00', deleted_at: null })
+    old.close()
+
+    vi.resetModules()
+    const fresh = await import('../src/lib/db')
+    expect((await fresh.listTrips()).map((t) => t.name)).toEqual(['From v1'])
   })
 })

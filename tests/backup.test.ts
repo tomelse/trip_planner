@@ -84,4 +84,31 @@ describe('export and import', () => {
     expect(d.attachments[0].mime).toBe('application/octet-stream')
     expect((await db.getBlob(d.attachments[0].id))!.type).toBe('application/octet-stream')
   })
+
+  it('is all or nothing: a failure part-way leaves nothing behind', async () => {
+    const tid = await sampleTrip()
+    const file = await backup.buildBackup([tid])
+    const before = (await db.listTrips()).length
+
+    // Make the database refuse to store a leg, after the trip and its places have already gone in.
+    const proto = (globalThis as unknown as { IDBObjectStore: { prototype: { add: (...a: unknown[]) => unknown } } }).IDBObjectStore.prototype
+    const realAdd = proto.add
+    proto.add = function (this: { name: string }, ...args: unknown[]) {
+      if (this.name === 'legs') throw new Error('disk full')
+      return realAdd.apply(this, args)
+    }
+    try {
+      await expect(backup.importBackup(file)).rejects.toThrow(/nothing was added/)
+    } finally {
+      proto.add = realAdd
+    }
+
+    expect(await db.listTrips()).toHaveLength(before)
+    const { openDB } = await import('idb')
+    const raw = await openDB('trip-planner')
+    // Only the original trip's records remain: one place, one leg, one note, one item, one file.
+    expect(await raw.count('places')).toBe(1)
+    expect(await raw.count('attachments')).toBe(1)
+    expect(await raw.count('blobs')).toBe(1)
+  })
 })

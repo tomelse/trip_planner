@@ -32,14 +32,14 @@
     run(async () => {
       const t = store.current?.trip
       if (!t) return 'No trip is open.'
-      await store.saveNow()
+      await store.flush()
       download(await buildBackup([t.id]), `${safeName(t.name)}-${today()}.zip`)
       return 'Backup saved.'
     })
 
   const exportAll = () =>
     run(async () => {
-      await store.saveNow()
+      await store.flush()
       download(await buildBackup(), `trips-${today()}.zip`)
       return 'Backup saved.'
     })

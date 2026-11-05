@@ -29,6 +29,26 @@
   })
   useBackButton()
 
+  // Edits wait a moment before they are written. Write them as soon as the app is hidden or closed: a phone can swap
+  // the app out (or kill it) without warning, and the last few keystrokes shouldn't go with it.
+  $effect(() => {
+    const save = () => void store.flush()
+    const onVisibility = () => document.visibilityState === 'hidden' && save()
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', save)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', save)
+    }
+  })
+
+  // A newer copy of the app in another window upgraded the database; this one has let go of it.
+  $effect(() => {
+    const outdated = () => store.notify('Trip Planner was updated in another window. Reload to keep working.', async () => location.reload(), 'Reload')
+    window.addEventListener('trip-db-outdated', outdated)
+    return () => window.removeEventListener('trip-db-outdated', outdated)
+  })
+
   // Only the panels inside the page scroll. If anything ever shifts the page itself (there is no scrollbar to undo
   // it), put it straight back so the map and the trip menu can't end up out of reach.
   $effect(() => {
