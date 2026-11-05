@@ -3,6 +3,7 @@ import * as db from './db'
 import { addDays, iso, parse } from './dates'
 import { reverse } from './geo'
 import { Focus } from './focus.svelte'
+import type { Shared } from './share'
 import { nextColor } from './palette'
 import { findIssues, type Issue } from './issues'
 import type { Attachment, ChecklistItem, Leg, Note, Place, Trip, TripDetail } from './types'
@@ -25,6 +26,8 @@ class Store {
   /** The new-trip / trip-details dialog, when open. */
   tripDialog = $state<'new' | 'edit' | null>(null)
   /** Open menus on the map. Held here so the Back button can close them. */
+  /** A place shared into the app, waiting for you to confirm where it is. */
+  shared = $state<Shared | null>(null)
   tripMenuOpen = $state(false)
   layersOpen = $state(false)
   error = $state<string | null>(null)

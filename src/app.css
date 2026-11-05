@@ -122,3 +122,17 @@ path.leaflet-interactive { outline: none; -webkit-tap-highlight-color: transpare
   button, input, select { min-height: 36px; }
   .pin-wrap { width: 32px !important; height: 32px !important; margin: -16px 0 0 -16px !important; display: flex; align-items: center; justify-content: center; }
 }
+
+/* Touchscreens only, so a desktop browser behaves exactly as before. */
+@media (pointer: coarse) {
+  /* A long press on a button or tab shouldn't start selecting its label or pop the system callout. */
+  button, nav, label.field, h2, h3, summary, .leaflet-container {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  /* ...but text you might want to copy or edit stays selectable. */
+  input, textarea, select, .notes, .addr, .details p { -webkit-user-select: text; user-select: text; }
+  /* No double-tap-to-zoom delay or grey tap flash on controls. */
+  button, input, select, textarea, label, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+}

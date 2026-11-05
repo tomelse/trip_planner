@@ -6,8 +6,27 @@
   import TripDialog from './components/TripDialog.svelte'
   import { store } from './lib/store.svelte'
   import { useBackButton } from './lib/backButton.svelte'
+  import { clearLaunch, readLaunch } from './lib/launch'
+  import SharedPlaceDialog from './components/SharedPlaceDialog.svelte'
 
-  onMount(() => store.init())
+  onMount(() => {
+    store.init().then(() => {
+      // Opened from an icon shortcut, or with a place shared into the app.
+      const launch = readLaunch()
+      if (!launch) return
+      clearLaunch()
+      if (launch.kind === 'new-trip') store.tripDialog = 'new'
+      else if (launch.kind === 'share') store.shared = launch.shared
+      else {
+        if (launch.agenda) {
+          try {
+            localStorage.setItem('trips:calendar-view', 'agenda')
+          } catch {}
+        }
+        store.tab = launch.tab
+      }
+    })
+  })
   useBackButton()
 
   const typing = (el: HTMLElement | null) =>
@@ -34,6 +53,7 @@
   <MapView />
 </main>
 <TripDialog />
+<SharedPlaceDialog />
 <Toast />
 
 <style>

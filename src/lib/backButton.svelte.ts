@@ -16,6 +16,7 @@ export function useBackButton() {
     () =>
       [
         store.tripDialog && (() => (store.tripDialog = null)),
+        store.shared && (() => (store.shared = null)),
         store.tripMenuOpen && (() => (store.tripMenuOpen = false)),
         store.layersOpen && (() => (store.layersOpen = false)),
         store.focus.editing && (() => store.focus.stopEdit()),
@@ -28,7 +29,7 @@ export function useBackButton() {
 
   // Layers opened or closed by the app (tracked): keep the history the same height.
   $effect(() => {
-    store.tripDialog, store.tripMenuOpen, store.layersOpen, store.focus.editing, store.focus.selected, store.mapExpanded, store.tab
+    store.tripDialog, store.shared, store.tripMenuOpen, store.layersOpen, store.focus.editing, store.focus.selected, store.mapExpanded, store.tab
     untrack(() => stack.sync())
   })
 

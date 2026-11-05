@@ -14,6 +14,12 @@ Stack: Svelte 5, TypeScript, Vite, Leaflet, OSM tiles + Nominatim, IndexedDB (`i
 
 It is an installable web app. Publish it, open the address in Chrome on Android, then use the menu → **Install app** (or **Add to Home screen**). After the first load it works offline, including map areas you have already looked at.
 
+Android extras (installed app only; a desktop browser is unaffected):
+- **Long-press the icon** for shortcuts: New trip, Itinerary, Travel.
+- **Share a place into it** from Google Maps or any app's Share menu. A link with coordinates is used exactly; otherwise the shared name and address are searched and you pick the match. Short `maps.app.goo.gl` links can't be opened from inside the app, so those rely on the name and address text that comes with them.
+- Text on buttons and tabs isn't selectable by long-press on touchscreens (inputs and notes still are).
+- After a new release, Android can take a day or so to update an installed app's shortcuts and share entry; reinstalling picks them up immediately.
+
 Publishing to GitHub Pages: push the project to a GitHub repository, then in **Settings → Pages** set the source to **GitHub Actions**. The workflow in `.github/workflows/deploy.yml` builds and deploys on every push to `main`. Only the app's code is published, never your trips.
 
 ## Your data

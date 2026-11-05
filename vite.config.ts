@@ -20,6 +20,14 @@ export default defineConfig({
         theme_color: '#0f766e',
         background_color: '#fafaf8',
         display: 'standalone',
+        // Long-press the icon on Android. Handled in App.svelte from the ?action= parameter.
+        shortcuts: [
+          { name: 'New trip', short_name: 'New trip', url: './?action=new-trip', icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Itinerary', short_name: 'Itinerary', url: './?action=itinerary', icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Travel', short_name: 'Travel', url: './?action=travel', icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }] },
+        ],
+        // Appear in Android's Share menu (installed app only). A GET share opens the app with ?title=&text=&url=.
+        share_target: { action: './', method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
