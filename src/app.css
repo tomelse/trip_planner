@@ -13,6 +13,9 @@
   --travel: #475569;
   --travel-soft: #e8ebf0;
   --radius: 6px;
+  /* Heights other sticky bars stack under; see Sidebar and CalendarView. */
+  --nav-h: 42px;
+  --viewbar-h: 52px;
   font-family: ui-sans-serif, -apple-system, 'Helvetica Neue', 'Segoe UI', sans-serif;
   font-size: 14px;
   color: var(--ink);

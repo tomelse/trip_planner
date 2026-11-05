@@ -58,7 +58,7 @@
     display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
     background: var(--panel); border-right: 1px solid var(--line);
   }
-  nav { display: flex; gap: 0; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; flex: none; }
+  nav { height: var(--nav-h); box-sizing: border-box; display: flex; gap: 0; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; flex: none; }
   nav button {
     border: none; border-radius: 0; padding: 10px 8px; color: var(--ink-2);
     border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; min-height: 0;
@@ -71,7 +71,9 @@
   @media (max-width: 820px) {
     aside { overflow-y: auto; }
     .body { overflow: visible; flex: none; }
-    nav { position: sticky; top: 0; z-index: 2; background: var(--panel); }
+    nav { position: sticky; top: 0; z-index: 3; background: var(--panel); }
+    /* The whole panel scrolls here, so the tab bar is stuck at the top; anything else that sticks goes under it. */
+    .body { --sticky-top: var(--nav-h); }
   }
   .empty, .error { padding: 16px; color: var(--ink-2); margin: 0; }
   .empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }

@@ -100,9 +100,11 @@
   }
 </script>
 
-<div class="views" role="tablist">
-  <button role="tab" aria-selected={view === 'month'} class:on={view === 'month'} onclick={() => setView('month')}>Month</button>
-  <button role="tab" aria-selected={view === 'agenda'} class:on={view === 'agenda'} onclick={() => setView('agenda')}>Itinerary</button>
+<div class="viewbar">
+  <div class="views" role="tablist">
+    <button role="tab" aria-selected={view === 'month'} class:on={view === 'month'} onclick={() => setView('month')}>Month</button>
+    <button role="tab" aria-selected={view === 'agenda'} class:on={view === 'agenda'} onclick={() => setView('agenda')}>Itinerary</button>
+  </div>
 </div>
 
 {#if view === 'agenda'}
@@ -232,7 +234,12 @@
 {/if}
 
 <style>
-  .views { display: flex; gap: 0; margin: 12px 12px 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  /* Stays put while the list scrolls, so the switch is always at the top. */
+  .viewbar {
+    position: sticky; top: var(--sticky-top, 0px); z-index: 2;
+    height: var(--viewbar-h); box-sizing: border-box; padding: 12px 12px 8px; background: var(--panel);
+  }
+  .views { display: flex; gap: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
   .views button { flex: 1; border: none; border-radius: 0; color: var(--ink-2); padding: 4px 8px; }
   .views button + button { border-left: 1px solid var(--line); }
   .views button.on { background: var(--hover); color: var(--ink); }

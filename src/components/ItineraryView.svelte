@@ -73,8 +73,11 @@
 </div>
 
 <style>
-  .agenda { margin-top: 12px; }
-  section { border-top: 1px solid var(--line); padding: 10px 12px 6px; }
+  section {
+    border-top: 1px solid var(--line); padding: 10px 12px 6px;
+    /* scrollIntoView stops short by this much, so a day lands just under the sticky Month | Itinerary bar. */
+    scroll-margin-top: calc(var(--sticky-top, 0px) + var(--viewbar-h));
+  }
   section:first-child { border-top: none; }
   section.past { opacity: 0.55; }
   h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 14px; font-weight: 600; }

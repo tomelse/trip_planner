@@ -96,7 +96,8 @@ class Store {
   notify(message: string, undo: (() => Promise<void>) | null = null, label = 'Undo') {
     clearTimeout(this.toastTimer)
     this.toast = { message, undo, label }
-    this.toastTimer = setTimeout(() => (this.toast = null), undo ? 10_000 : 5_000)
+    // Undo is time-boxed; the update prompt stays longer, and is offered again when the app next comes into view.
+    this.toastTimer = setTimeout(() => (this.toast = null), !undo ? 5_000 : label === 'Undo' ? 10_000 : 30_000)
   }
 
   /** Write any edits still waiting on the typing delay, e.g. before exporting. */
