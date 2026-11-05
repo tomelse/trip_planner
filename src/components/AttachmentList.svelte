@@ -3,7 +3,7 @@
   import { isImage, saveAttachment } from '../lib/files'
   import FileThumb from './FileThumb.svelte'
 
-  let { placeId, legId }: { placeId?: number; legId?: number } = $props()
+  let { placeId, legId, editable = true }: { placeId?: number; legId?: number; editable?: boolean } = $props()
 
   const files = $derived(
     (store.current?.attachments ?? []).filter((a) =>
@@ -26,19 +26,20 @@
   const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files')
 </script>
 
+{#if editable || files.length}
 <div
   class="files"
   class:dropping
   role="group"
   aria-label="Attachments"
   ondragover={(e) => {
-    if (!hasFiles(e)) return
+    if (!editable || !hasFiles(e)) return
     e.preventDefault()
     dropping = true
   }}
   ondragleave={() => (dropping = false)}
   ondrop={(e) => {
-    if (!hasFiles(e)) return
+    if (!editable || !hasFiles(e)) return
     e.preventDefault()
     dropping = false
     add([...(e.dataTransfer?.files ?? [])])
@@ -46,8 +47,10 @@
 >
   <div class="head">
     <span>Photos &amp; files</span>
-    <button class="ghost" disabled={busy} onclick={() => input?.click()}>{busy ? 'Uploading…' : '+ Add'}</button>
-    <input bind:this={input} type="file" multiple hidden onchange={() => { add([...(input?.files ?? [])]); if (input) input.value = '' }} />
+    {#if editable}
+      <button class="ghost" disabled={busy} onclick={() => input?.click()}>{busy ? 'Uploading…' : '+ Add'}</button>
+      <input bind:this={input} type="file" multiple hidden onchange={() => { add([...(input?.files ?? [])]); if (input) input.value = '' }} />
+    {/if}
   </div>
   {#if files.length}
     <div class="grid">
@@ -61,7 +64,9 @@
               <small>{size(f.size)}</small>
             </button>
           {/if}
-          <button class="x" onclick={() => store.deleteAttachment(f.id)} aria-label="Remove {f.name}" title="Remove">×</button>
+          {#if editable}
+            <button class="x" onclick={() => store.deleteAttachment(f.id)} aria-label="Remove {f.name}" title="Remove">×</button>
+          {/if}
         </div>
       {/each}
     </div>
@@ -69,6 +74,7 @@
     <p>Drop files here, or add photos, tickets and PDFs.</p>
   {/if}
 </div>
+{/if}
 
 <style>
   .files { border: 1px dashed transparent; border-radius: var(--radius); }

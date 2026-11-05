@@ -6,6 +6,7 @@
   import { PALETTE } from '../lib/palette'
   import ChecklistEditor from './ChecklistEditor.svelte'
   import AttachmentList from './AttachmentList.svelte'
+  import PlaceDetails from './PlaceDetails.svelte'
 
   let list: HTMLUListElement | undefined = $state()
   // Bring the open place into view, and the one being hovered on the map.
@@ -95,7 +96,7 @@
           <span class="when">{fmtStay(p.arrive_date, p.arrive_time, p.depart_date, p.depart_time)}</span>
         </button>
       </div>
-      {#if open}
+      {#if open && store.focus.isEditing(ref)}
         <div class="edit">
           <input value={p.name} oninput={(e) => store.patchPlace(p.id, { name: e.currentTarget.value })} aria-label="Place name" />
           <div class="dates">
@@ -149,9 +150,14 @@
           <AttachmentList placeId={p.id} />
           <div class="foot">
             <span class="coords">{p.lat.toFixed(4)}, {p.lng.toFixed(4)}</span>
-            <button class="ghost danger" onclick={() => store.deletePlace(p.id)}>Remove</button>
+            <span class="acts">
+              <button class="ghost danger" onclick={() => store.deletePlace(p.id)}>Remove</button>
+              <button class="primary" onclick={() => store.focus.stopEdit()}>Done</button>
+            </span>
           </div>
         </div>
+      {:else if open}
+        <PlaceDetails place={p} />
       {/if}
     </li>
   {/each}
@@ -187,6 +193,7 @@
   .addr button { white-space: nowrap; }
   .dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .foot { display: flex; justify-content: space-between; align-items: center; }
+  .acts { display: flex; gap: 6px; align-items: center; }
   .coords { color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
   .empty { padding: 16px; color: var(--ink-2); margin: 0; }
 </style>

@@ -2,8 +2,9 @@
   import { store } from '../lib/store.svelte'
   import { hoverable, revealRow } from '../lib/hoverable'
   import { fmt, fmtTime } from '../lib/dates'
-  import { MODES, carrierLabel, dayOffset, legTimes, legTitle, legTz, modeLabel, numberLabel } from '../lib/legs'
-  import { fmtDuration, fmtOffset, toUtc, validTz } from '../lib/tz'
+  import { MODES, carrierLabel, dayOffset, legDuration, legTitle, legTzNote, modeLabel, numberLabel } from '../lib/legs'
+  import { validTz } from '../lib/tz'
+  import LegDetails from './LegDetails.svelte'
   import AttachmentList from './AttachmentList.svelte'
   import type { Leg, LegMode } from '../lib/types'
   import type { SearchResult } from '../lib/geo'
@@ -26,23 +27,9 @@
 
   const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
 
-  /** "Europe/London · UTC+1" for the zone at one end, flagged when it was looked up rather than chosen. */
-  function tzNote(l: Leg, end: 'from' | 'to') {
-    const { tz, detected } = legTz(l, end, detail.places)
-    if (!tz) return 'Unknown. Locate this end or pick a zone.'
-    const date = end === 'from' ? l.depart_date : l.arrive_date
-    const at = date ? toUtc(date, end === 'from' ? (l.depart_time ?? '12:00') : (l.arrive_time ?? '12:00'), tz) : Date.now()
-    return `${tz} · ${fmtOffset(at, tz)}${detected ? ' (detected)' : ''}`
-  }
-
   function setTz(l: Leg, end: 'from' | 'to', v: string) {
     const tz = v.trim()
     if (tz === '' || validTz(tz)) store.patchLeg(l.id, { [`${end}_tz`]: tz || null })
-  }
-
-  function duration(l: Leg) {
-    const t = legTimes(l, detail.places)
-    return t.dep !== null && t.arr !== null && t.arr > t.dep ? fmtDuration((t.arr - t.dep) / 60000) : ''
   }
 
   // An end uses either a located point (airport, station) or a linked pin, never both.
@@ -94,7 +81,7 @@
         </span>
       </button>
 
-      {#if open}
+      {#if open && store.focus.isEditing(ref)}
         <div class="edit">
           <div class="grid">
             <label class="field">Mode
@@ -127,7 +114,7 @@
               <input type="time" value={l.depart_time ?? ''} oninput={(e) => store.patchLeg(l.id, { depart_time: e.currentTarget.value || null })} aria-label="Departure time" />
             </div>
             <input list="zones" placeholder="Time zone override, e.g. Europe/London" value={l.from_tz ?? ''} onchange={(e) => setTz(l, 'from', e.currentTarget.value)} aria-label="Departure time zone" />
-            <small class="tz">{tzNote(l, 'from')}</small>
+            <small class="tz">{legTzNote(l, 'from', detail.places)}</small>
           </fieldset>
 
           <fieldset>
@@ -142,7 +129,7 @@
               <input type="time" value={l.arrive_time ?? ''} oninput={(e) => store.patchLeg(l.id, { arrive_time: e.currentTarget.value || null })} aria-label="Arrival time" />
             </div>
             <input list="zones" placeholder="Time zone override, e.g. America/New_York" value={l.to_tz ?? ''} onchange={(e) => setTz(l, 'to', e.currentTarget.value)} aria-label="Arrival time zone" />
-            <small class="tz">{tzNote(l, 'to')}{#if duration(l)} · Duration {duration(l)}{/if}</small>
+            <small class="tz">{legTzNote(l, 'to', detail.places)}{#if legDuration(l, detail.places)} · Duration {legDuration(l, detail.places)}{/if}</small>
           </fieldset>
 
           {#each warns as w}<p class="issue" class:err={w.level === 'error'}>{w.message}</p>{/each}
@@ -150,9 +137,14 @@
           <AttachmentList legId={l.id} />
           <div class="foot">
             <small>Times are local at each end.</small>
-            <button class="ghost danger" onclick={() => store.deleteLeg(l.id)}>Remove</button>
+            <span class="acts">
+              <button class="ghost danger" onclick={() => store.deleteLeg(l.id)}>Remove</button>
+              <button class="primary" onclick={() => store.focus.stopEdit()}>Done</button>
+            </span>
           </div>
         </div>
+      {:else if open}
+        <LegDetails leg={l} />
       {/if}
     </li>
   {/each}
@@ -174,6 +166,7 @@
   fieldset { border: 1px solid var(--line); border-radius: var(--radius); margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   legend { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); padding: 0 4px; }
   .foot { display: flex; justify-content: space-between; align-items: center; }
+  .acts { display: flex; gap: 6px; align-items: center; }
   small { color: var(--ink-3); }
   .tz { font-size: 11px; }
   .warn { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--warn); color: var(--panel); font-size: 11px; font-weight: 700; text-align: center; line-height: 16px; }

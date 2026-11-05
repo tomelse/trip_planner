@@ -3,6 +3,8 @@ import type { TripDetail } from './types'
 /** Anything on the map or in a list that can be hovered or opened. */
 export type Ref = { type: 'place' | 'leg'; id: number }
 
+const same = (a: Ref, b: Ref) => a.type === b.type && a.id === b.id
+
 type Source = 'list' | 'map'
 type Hover = { kind: 'place' | 'leg'; id: number; source: Source } | { kind: 'spot'; ids: number[]; source: Source }
 
@@ -15,6 +17,8 @@ type Hover = { kind: 'place' | 'leg'; id: number; source: Source } | { kind: 'sp
 export class Focus {
   selected = $state<Ref | null>(null)
   hover = $state<Hover | null>(null)
+  /** The open item is showing its edit form rather than its details. Always the selected item, or nothing. */
+  editing = $state<Ref | null>(null)
 
   constructor(
     private detail: () => TripDetail | null,
@@ -29,6 +33,7 @@ export class Focus {
   }
 
   select(ref: Ref) {
+    if (this.editing && !same(this.editing, ref)) this.editing = null
     this.selected = ref
     this.reveal(ref)
   }
@@ -41,6 +46,23 @@ export class Focus {
 
   clearSelection() {
     this.selected = null
+    this.editing = null
+  }
+
+  // ---- editing: opening something shows its details; editing is a deliberate second step
+
+  isEditing(ref: Ref) {
+    return this.isSelected(ref) && !!this.editing && same(this.editing, ref)
+  }
+
+  /** Open the item (if it isn't) and switch it to its edit form. */
+  startEdit(ref: Ref) {
+    if (!this.isSelected(ref)) this.select(ref)
+    this.editing = ref
+  }
+
+  stopEdit() {
+    this.editing = null
   }
 
   // ---- hover
@@ -70,12 +92,13 @@ export class Focus {
 
   /** Forget everything about a deleted or switched-away item. */
   forget(ref: Ref) {
-    if (this.isSelected(ref)) this.selected = null
+    if (this.isSelected(ref)) this.clearSelection()
     this.unhoverRef(ref)
   }
 
   reset() {
     this.selected = null
+    this.editing = null
     this.hover = null
   }
 

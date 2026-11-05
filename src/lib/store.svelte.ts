@@ -245,7 +245,7 @@ class Store {
       ...partial,
     })
     d.legs.push(leg)
-    this.focus.select({ type: 'leg', id: leg.id })
+    this.focus.startEdit({ type: 'leg', id: leg.id })
   }
 
   patchLeg(id: number, patch: Partial<Leg>) {

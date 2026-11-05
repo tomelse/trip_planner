@@ -1,6 +1,6 @@
 import type { Leg, LegMode, Place } from './types'
 import { dayDiff } from './dates'
-import { toUtc, tzAt } from './tz'
+import { fmtDuration, fmtOffset, toUtc, tzAt } from './tz'
 
 export const MODES: { id: LegMode; label: string }[] = [
   { id: 'flight', label: 'Flight' },
@@ -93,4 +93,20 @@ export function legBends(legs: Leg[], places: Place[]): Map<number, number> {
     out.set(l.id, BASE_BEND + BEND_STEP * n)
   }
   return out
+}
+
+/** "Europe/London · UTC+1" for the zone at one end, flagged when it was looked up rather than chosen. */
+export function legTzNote(l: Leg, end: End, places: Place[]): string {
+  const { tz, detected } = legTz(l, end, places)
+  if (!tz) return 'Unknown. Locate this end or pick a zone.'
+  const date = end === 'from' ? l.depart_date : l.arrive_date
+  const time = (end === 'from' ? l.depart_time : l.arrive_time) ?? '12:00'
+  const at = date ? toUtc(date, time, tz) : Date.now()
+  return `${tz} · ${fmtOffset(at, tz)}${detected ? ' (detected)' : ''}`
+}
+
+/** "8h 15m" when both ends have a date and time, else ''. */
+export function legDuration(l: Leg, places: Place[]): string {
+  const t = legTimes(l, places)
+  return t.dep !== null && t.arr !== null && t.arr > t.dep ? fmtDuration((t.arr - t.dep) / 60000) : ''
 }
