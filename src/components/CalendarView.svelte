@@ -214,7 +214,7 @@
         <span class="mode">{modeLabel(leg.mode)}</span>
         <span>{legTitle(leg)}</span>
         <small>
-          {kind === 'dep' ? 'dep' : 'arr'}{time ? ` ${time}` : ''}{#if kind === 'dep' && !dayOffset(leg) && leg.arrive_time} → {leg.arrive_time}{:else if kind === 'dep' && dayOffset(leg)} · arr +{dayOffset(leg)}{/if}
+          {kind === 'dep' ? 'dep' : 'arr'}{time ? ` ${time}` : ''}{kind === 'dep' && !dayOffset(leg) && leg.arrive_time ? ` → ${leg.arrive_time}` : kind === 'dep' && dayOffset(leg) ? ` · arr +${dayOffset(leg)}` : ''}
         </small>
       </button>
     {/each}

@@ -42,7 +42,7 @@
 
     {#if leg}
       <p class="title">{legTitle(leg)}</p>
-      <p class="sub">{modeLabel(leg.mode)}{#if operator} · {operator}{/if}</p>
+      <p class="sub">{modeLabel(leg.mode)}{operator ? ` · ${operator}` : ''}</p>
       <div class="times">
         {#if leg.depart_date}
           <p><span class="k">Departs</span> {[day(leg.depart_date), leg.depart_time && fmtTime(leg.depart_time)].filter(Boolean).join(', ')}

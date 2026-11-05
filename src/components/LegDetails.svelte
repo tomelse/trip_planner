@@ -20,7 +20,7 @@
 
 <div class="details">
   <p class="route">{legTitle(leg)}</p>
-  <p class="sub">{modeLabel(leg.mode)}{#if operator} · {operator}{/if}</p>
+  <p class="sub">{modeLabel(leg.mode)}{operator ? ` · ${operator}` : ''}</p>
 
   {#if leg.depart_date || leg.depart_time}
     <div class="row">
@@ -36,7 +36,7 @@
       <span class="k">Arrives</span>
       <span>
         {[day(leg.arrive_date), leg.arrive_time].filter(Boolean).join(', ')}{#if plus} <sup>+{plus}</sup>{/if}
-        <small>{legTzNote(leg, 'to', places)}{#if duration} · {duration}{/if}</small>
+        <small>{legTzNote(leg, 'to', places)}{duration ? ` · ${duration}` : ''}</small>
       </span>
     </div>
   {/if}

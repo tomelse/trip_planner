@@ -129,7 +129,7 @@
               <input type="time" value={l.arrive_time ?? ''} oninput={(e) => store.patchLeg(l.id, { arrive_time: e.currentTarget.value || null })} aria-label="Arrival time" />
             </div>
             <input list="zones" placeholder="Time zone override, e.g. America/New_York" value={l.to_tz ?? ''} onchange={(e) => setTz(l, 'to', e.currentTarget.value)} aria-label="Arrival time zone" />
-            <small class="tz">{legTzNote(l, 'to', detail.places)}{#if legDuration(l, detail.places)} · Duration {legDuration(l, detail.places)}{/if}</small>
+            <small class="tz">{legTzNote(l, 'to', detail.places)}{legDuration(l, detail.places) ? ` · Duration ${legDuration(l, detail.places)}` : ''}</small>
           </fieldset>
 
           {#each warns as w}<p class="issue" class:err={w.level === 'error'}>{w.message}</p>{/each}
