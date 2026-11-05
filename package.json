@@ -8,19 +8,23 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.scripts.json",
-    "export-legacy": "tsx scripts/export-legacy.ts"
+    "export-legacy": "tsx scripts/export-legacy.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.6.6",
     "@types/tz-lookup": "^6.1.2",
+    "fake-indexeddb": "^6.2.7",
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vite": "^8.3.6",
     "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.0",
     "workbox-window": "^7.4.1"
   },
   "dependencies": {

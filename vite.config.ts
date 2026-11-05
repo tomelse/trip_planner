@@ -1,15 +1,24 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // GitHub Pages serves a project site from /<repo>/, so the deploy workflow sets BASE_PATH. Locally it is just "/".
 const base = process.env.BASE_PATH ?? '/'
 
+const testing = !!process.env.VITEST
+
 export default defineConfig({
   base,
+  test: {
+    include: ['tests/**/*.test.ts'],
+    environment: 'node',
+    // A fake IndexedDB so the on-device database can be tested without a browser.
+    setupFiles: ['tests/setup.ts'],
+  },
   plugins: [
     svelte(),
-    VitePWA({
+    // The service worker is a build-time concern; leave it out of tests.
+    ...(testing ? [] : [VitePWA({
       // An open copy of the app keeps running its old version until you accept the update prompt.
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
@@ -50,6 +59,6 @@ export default defineConfig({
           },
         ],
       },
-    }),
+    })]),
   ],
 })
