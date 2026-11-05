@@ -68,11 +68,6 @@
   .row small { display: block; color: var(--ink-3); font-size: 11px; }
   sup { font-size: 9px; }
   .notes { white-space: pre-wrap; overflow-wrap: anywhere; }
-  .issue { font-size: 12px; color: var(--warn); }
-  .issue.err { color: var(--danger); }
   .dirs { display: flex; flex-wrap: wrap; gap: 6px; }
-  .btn { display: inline-block; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; }
-  .btn:hover { background: var(--hover); }
-  .foot { display: flex; justify-content: space-between; align-items: center; }
   .foot small { color: var(--ink-3); }
 </style>

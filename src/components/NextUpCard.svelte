@@ -84,6 +84,4 @@
   .ref .k { display: block; }
   .ref strong { font-size: 24px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-  .btn { display: inline-block; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; background: transparent; }
-  .btn:hover { background: var(--hover); }
 </style>

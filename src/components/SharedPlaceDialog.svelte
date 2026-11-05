@@ -121,13 +121,6 @@
 </dialog>
 
 <style>
-  dialog {
-    width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto;
-    padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink);
-  }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
-  .content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-  h2 { margin: 0; font-size: 16px; }
   p { margin: 0; }
   .what { font-weight: 600; overflow-wrap: anywhere; }
   .muted { color: var(--ink-2); font-size: 13px; }

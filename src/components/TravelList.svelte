@@ -74,7 +74,7 @@
         <span class="mode">{modeLabel(l.mode)}</span>
         <span class="title">{legTitle(l)}</span>
         {#if warns.length}
-          <span class="warn" class:err={warns.some((w) => w.level === 'error')} title={warns.map((w) => w.message).join('\n')}>!</span>
+          <span class="issue-dot" class:err={warns.some((w) => w.level === 'error')} title={warns.map((w) => w.message).join('\n')}>!</span>
         {/if}
         <span class="when">
           {#if l.depart_date}{fmt(l.depart_date)}{/if}{#if l.depart_time}&nbsp;{fmtTime(l.depart_time)}{/if}
@@ -166,13 +166,7 @@
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   fieldset { border: 1px solid var(--line); border-radius: var(--radius); margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   legend { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); padding: 0 4px; }
-  .foot { display: flex; justify-content: space-between; align-items: center; }
-  .acts { display: flex; gap: 6px; align-items: center; }
   small { color: var(--ink-3); }
   .tz { font-size: 11px; }
-  .warn { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--warn); color: var(--panel); font-size: 11px; font-weight: 700; text-align: center; line-height: 16px; }
-  .warn.err { background: var(--danger); }
-  .issue { margin: 0; font-size: 12px; color: var(--warn); }
-  .issue.err { color: var(--danger); }
   .empty { padding: 0 12px 12px; margin: 0; color: var(--ink-2); }
 </style>

@@ -5,6 +5,8 @@ Plan trips: pin places on an OpenStreetMap map, track flights and other travel (
 ```
 npm install
 npm run dev        # http://localhost:5173
+npm test           # unit tests (vitest, with a fake IndexedDB)
+npm run check      # type and Svelte checks
 npm run build      # static site in dist/
 ```
 
@@ -35,11 +37,8 @@ Publishing to GitHub Pages: push the project to a GitHub repository, then in **S
 - Deleting something hides it for 30 days so it can be undone (the toast, or Cmd/Ctrl+Z). After that it is purged on the next start.
 - Time zones are looked up offline from coordinates ([tz-lookup](https://github.com/photostructure/tz-lookup)) and can be overridden per leg end.
 - Photos (JPEG, PNG, WebP) bigger than 2048 px are scaled down when you attach them, which also removes hidden metadata such as the GPS position they were taken at. Other files are stored exactly as they are.
+- Backup files are not trusted: every value is checked on import (colours, dates, coordinates, time zones, links...) and anything malformed is dropped. Names and colours are never put into the page as HTML, and a Content-Security-Policy blocks inline scripts.
 - Files can be up to 50 MB each. Only plain images are ever shown in the app; everything else downloads.
-
-### Coming from the old server version
-
-Earlier versions kept data in `data/trips.db` behind a small server. To bring it over, run `npm run export-legacy` (read-only; writes `data/legacy-export.zip`), then **Import backup…** in the app. `data/` is git-ignored. You can delete `scripts/export-legacy.ts` afterwards.
 
 ## Interaction
 

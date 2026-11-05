@@ -40,11 +40,5 @@
   .row { display: flex; gap: 10px; font-size: 13px; }
   .k { width: 44px; flex: none; color: var(--ink-3); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; padding-top: 2px; }
   .notes { white-space: pre-wrap; overflow-wrap: anywhere; }
-  .issue { font-size: 12px; color: var(--warn); }
-  .issue.err { color: var(--danger); }
-  .foot { display: flex; justify-content: space-between; align-items: center; }
-  .acts { display: flex; gap: 6px; align-items: center; }
-  .btn { display: inline-block; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; }
-  .btn:hover { background: var(--hover); }
   .coords { color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
 </style>

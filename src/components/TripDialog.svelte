@@ -120,13 +120,6 @@
 </dialog>
 
 <style>
-  dialog {
-    width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto;
-    padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink);
-  }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
-  .content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-  h2 { margin: 0; font-size: 16px; }
   h3 { margin: 0; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--danger); }
   .dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .buttons { display: flex; justify-content: flex-end; gap: 8px; }

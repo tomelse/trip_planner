@@ -128,7 +128,7 @@
             {#if p.category}<small>{categoryLabel(p.category)}</small>{/if}
           </span>
           {#if warns.length}
-            <span class="warn" class:err={warns.some((w) => w.level === 'error')} title={warns.map((w) => w.message).join('\n')}>!</span>
+            <span class="issue-dot" class:err={warns.some((w) => w.level === 'error')} title={warns.map((w) => w.message).join('\n')}>!</span>
           {/if}
           <span class="when">{fmtStay(p.arrive_date, p.arrive_time, p.depart_date, p.depart_time)}</span>
         </button>
@@ -258,10 +258,6 @@
   .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .name small { display: block; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
   .when { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
-  .warn { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--warn); color: var(--panel); font-size: 11px; font-weight: 700; text-align: center; line-height: 16px; }
-  .warn.err { background: var(--danger); }
-  .issue { margin: 0; font-size: 12px; color: var(--warn); }
-  .issue.err { color: var(--danger); }
   .edit { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; }
   .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
   .sw { width: 20px; height: 20px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
@@ -276,8 +272,6 @@
   .move button { flex: 1; white-space: nowrap; }
   .addr button { white-space: nowrap; }
   .dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .foot { display: flex; justify-content: space-between; align-items: center; }
-  .acts { display: flex; gap: 6px; align-items: center; }
   .coords { color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
   .empty { padding: 16px; color: var(--ink-2); margin: 0; }
 </style>

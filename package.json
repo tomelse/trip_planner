@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.scripts.json",
-    "export-legacy": "tsx scripts/export-legacy.ts",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -20,7 +19,6 @@
     "fake-indexeddb": "^6.2.7",
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",
-    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vite": "^8.3.6",
     "vite-plugin-pwa": "^2.0.0",
