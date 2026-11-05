@@ -1,4 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb'
+import { clean } from './clean'
 import type { Attachment, TripDetail } from './types'
 
 /**
@@ -57,8 +58,15 @@ function getDb() {
 /** "2026-11-05 10:21:03" in UTC: the same shape SQLite's datetime('now') produced, and it sorts as text. */
 const stamp = (d = new Date()) => d.toISOString().slice(0, 19).replace('T', ' ')
 
+/** The writable columns present in `data`, each cleaned; a value of the wrong shape is dropped (see clean.ts). */
 const pick = (table: Table, data: Record<string, unknown>) =>
-  Object.fromEntries(WRITABLE[table].filter((c) => data[c] !== undefined).map((c) => [c, typeof data[c] === 'boolean' ? Number(data[c]) : data[c]]))
+  Object.fromEntries(
+    WRITABLE[table].flatMap((c) => {
+      if (data[c] === undefined) return []
+      const v = clean(c, data[c])
+      return v === undefined ? [] : [[c, v]]
+    }),
+  )
 
 const byId = (a: Row, b: Row) => a.id - b.id
 const text = (v: unknown) => (typeof v === 'string' ? v : '')

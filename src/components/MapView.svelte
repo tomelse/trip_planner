@@ -3,10 +3,11 @@
   import 'leaflet/dist/leaflet.css'
   import { onMount, untrack } from 'svelte'
   import { store } from '../lib/store.svelte'
-  import type { Place } from '../lib/types'
+  import type { Leg, Place } from '../lib/types'
   import type { Ref } from '../lib/focus.svelte'
   import { endpoint, legBends, legTitle, modeLabel } from '../lib/legs'
   import { arcArrow, arcPoints } from '../lib/arc'
+  import { isColor } from '../lib/clean'
   import { HereControl, MapControls } from '../lib/mapControls'
   import SearchBox from './SearchBox.svelte'
   import TripBar from './TripBar.svelte'
@@ -217,22 +218,26 @@
     return el
   }
 
+  // Icons are built as elements, never as HTML strings: names and colours can come from search results or a file.
   function arrowIcon(angle: number) {
-    return L.divIcon({
-      className: 'leg-arrow-wrap',
-      html: `<span class="leg-arrow" style="transform: rotate(${angle}deg)"></span>`,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6],
-    })
+    const arrow = document.createElement('span')
+    arrow.className = 'leg-arrow'
+    arrow.style.transform = `rotate(${angle}deg)`
+    return L.divIcon({ className: 'leg-arrow-wrap', html: arrow, iconSize: [12, 12], iconAnchor: [6, 6] })
   }
 
   function pinIcon(color: string) {
-    return L.divIcon({
-      className: 'pin-wrap',
-      html: `<span class="pin" style="--c:${color}"></span>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-    })
+    const dot = document.createElement('span')
+    dot.className = 'pin'
+    dot.style.setProperty('--c', isColor(color) ? color : '#888888')
+    return L.divIcon({ className: 'pin-wrap', html: dot, iconSize: [14, 14], iconAnchor: [7, 7] })
+  }
+
+  /** Plain text in a node (a string tooltip would be parsed as HTML, and leg names come from search results). */
+  function legTooltip(l: Leg) {
+    const el = document.createElement('div')
+    el.textContent = `${modeLabel(l.mode)} · ${legTitle(l)}${l.depart_time ? ` · ${l.depart_time}` : ''}`
+    return el
   }
 
   // Swap the base map and toggle the rail overlay.
@@ -399,13 +404,12 @@
       const bend = bends.get(l.id) ?? 0.18
       const pts = arcPoints(a, b, bend)
       const { at, angle } = arcArrow(a, b, bend)
-      const label = `${modeLabel(l.mode)} · ${legTitle(l)}${l.depart_time ? ` · ${l.depart_time}` : ''}`
       let layers = legLayers.get(l.id)
       if (!layers) {
         const line = L.polyline(pts, { className: 'leg-line', interactive: false }).addTo(map)
         // Wider than the drawn line so thin arcs are easy to hit; bubbling off so a click here can't also drop a pin.
         const hit = L.polyline(pts, { weight: 12, opacity: 0, bubblingMouseEvents: false }).addTo(map)
-        hit.bindTooltip(label, { sticky: true })
+        hit.bindTooltip(legTooltip(l), { sticky: true })
         hit.on('click', () => focus.toggle(legRef(l.id)))
         hit.on('mouseover', () => focus.hoverRef(legRef(l.id), 'map'))
         hit.on('mouseout', () => focus.unhoverRef(legRef(l.id)))
@@ -415,7 +419,7 @@
       } else {
         layers.line.setLatLngs(pts)
         layers.hit.setLatLngs(pts)
-        layers.hit.setTooltipContent(label)
+        layers.hit.setTooltipContent(legTooltip(l))
         layers.arrow.setLatLng(at)
         if (layers.angle !== angle) {
           layers.arrow.setIcon(arrowIcon(angle))

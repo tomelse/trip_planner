@@ -8,6 +8,8 @@
     <meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Plan trips: pin places, track travel, notes and a calendar. Your data stays on your device." />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- Only this app's own scripts may run: no inline scripts or event-handler attributes, so injected HTML can't execute. -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'none'; base-uri 'self'" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Trip Planner</title>

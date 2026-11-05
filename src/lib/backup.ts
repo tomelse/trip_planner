@@ -1,5 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import * as db from './db'
+import { clean, cleanMime, cleanStamp, isColor } from './clean'
+import { PALETTE } from './palette'
 import type { Attachment, ChecklistItem, Leg, Note, Place, Trip } from './types'
 
 /**
@@ -26,6 +28,12 @@ export interface ExportFile {
   version: typeof VERSION
   exported_at: string
   trips: ExportedTrip[]
+}
+
+/** `created_at` as the database writes it, or nothing (the new trip is then dated now). */
+const createdAt = (v: unknown) => {
+  const stamp = cleanStamp(v)
+  return stamp ? { created_at: stamp } : {}
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
@@ -75,14 +83,17 @@ export async function importBackup(bytes: Uint8Array): Promise<number[]> {
   const created: number[] = []
   for (const t of arr(data.trips)) {
     if (!isRecord(t.trip)) continue
-    const trip = await db.insert('trips', t.trip, undefined, isRecord(t.trip) && typeof t.trip.created_at === 'string' ? { created_at: t.trip.created_at } : {})
+    const trip = await db.insert('trips', t.trip, undefined, createdAt(t.trip.created_at))
     const tripId = trip.id
     created.push(tripId)
 
     // Ids are reassigned on the way in, so links between records have to be remapped.
     const placeIds = new Map<number, number>()
-    for (const p of arr(t.places)) {
-      const made = await db.insert('places', p, tripId)
+    for (const [i, p] of arr(t.places).entries()) {
+      // A place without real coordinates can't go on a map (and would otherwise land at 0, 0).
+      if (clean('lat', p.lat) === undefined || clean('lng', p.lng) === undefined) continue
+      // A colour that isn't a plain hex code is replaced from the palette; it ends up in HTML and CSS.
+      const made = await db.insert('places', { ...p, color: isColor(p.color) ? p.color : PALETTE[i % PALETTE.length] }, tripId)
       if (num(p.id) !== null) placeIds.set(p.id as number, made.id)
     }
     const legIds = new Map<number, number>()
@@ -92,7 +103,8 @@ export async function importBackup(bytes: Uint8Array): Promise<number[]> {
       if (num(l.id) !== null) legIds.set(l.id as number, made.id)
     }
     for (const n of arr(t.notes)) {
-      await db.insert('notes', n, tripId, typeof n.updated_at === 'string' ? { updated_at: n.updated_at } : {})
+      const stamp = cleanStamp(n.updated_at)
+      await db.insert('notes', n, tripId, stamp ? { updated_at: stamp } : {})
     }
     for (const i of arr(t.items)) {
       const place = num(i.place_id) !== null ? placeIds.get(i.place_id as number) : undefined
@@ -102,7 +114,7 @@ export async function importBackup(bytes: Uint8Array): Promise<number[]> {
     for (const a of arr(t.attachments)) {
       const bytes = typeof a.file === 'string' ? entries[a.file] : undefined
       if (!bytes) continue
-      const mime = typeof a.mime === 'string' ? a.mime.toLowerCase() : 'application/octet-stream'
+      const mime = cleanMime(a.mime)
       const blob = new Blob([bytes as BlobPart], { type: db.INLINE_IMAGES.includes(mime) ? mime : 'application/octet-stream' })
       const place = num(a.place_id) !== null ? placeIds.get(a.place_id as number) : undefined
       const leg = num(a.leg_id) !== null ? legIds.get(a.leg_id as number) : undefined
@@ -115,7 +127,7 @@ export async function importBackup(bytes: Uint8Array): Promise<number[]> {
           name: typeof a.name === 'string' ? a.name.slice(0, 200) : 'file',
           mime,
           size: bytes.byteLength,
-          created_at: typeof a.created_at === 'string' ? a.created_at : new Date().toISOString().slice(0, 19).replace('T', ' '),
+          created_at: cleanStamp(a.created_at) ?? new Date().toISOString().slice(0, 19).replace('T', ' '),
         },
         blob,
       )
