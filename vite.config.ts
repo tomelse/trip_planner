@@ -15,7 +15,7 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Trip Planner',
-        short_name: 'Trips',
+        short_name: 'Trip Planner',
         description: 'Plan trips: pin places, track travel, notes and a calendar. Your data stays on your device.',
         theme_color: '#0f766e',
         background_color: '#fafaf8',

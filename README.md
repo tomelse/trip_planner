@@ -1,4 +1,4 @@
-# Trips
+# Trip Planner
 
 Plan trips: pin places on an OpenStreetMap map, track flights and other travel (with times in local time at each end), keep notes and checklists, attach photos and files, and see it all in a calendar or itinerary. It runs entirely in the browser; **your trips are stored on your device** (IndexedDB) and never sent anywhere.
 
