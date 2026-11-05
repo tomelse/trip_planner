@@ -1,6 +1,7 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
   import { fmtTripDates } from '../lib/dates'
+  import { covers } from '../lib/covers.svelte'
   import DataMenu from './DataMenu.svelte'
 
   let root: HTMLDivElement | undefined = $state()
@@ -77,6 +78,10 @@
         <button role="menuitem" onclick={() => openDialog('new')}>New trip…</button>
         {#if trip}<button role="menuitem" onclick={() => openDialog('edit')}>Trip details…</button>{/if}
         <button role="menuitem" aria-expanded={showData} onclick={() => (showData = !showData)}>Backup &amp; import…</button>
+        <button role="menuitemcheckbox" aria-checked={covers.enabled} onclick={() => covers.setEnabled(!covers.enabled)}>
+          Place photos: {covers.enabled ? 'on' : 'off'}
+          <small>Looked up on Wikipedia and Wikimedia from each place's name and position, once, and kept on this device.</small>
+        </button>
       </div>
       {#if showData}<div class="data"><DataMenu /></div>{/if}
     </div>
@@ -102,7 +107,7 @@
   li button, .actions button { display: flex; flex-direction: column; align-items: flex-start; width: 100%; border: none; text-align: left; gap: 1px; }
   li button.cur { background: var(--hover); }
   .n { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  li small { color: var(--ink-3); font-size: 11px; }
+  li small, .actions small { color: var(--ink-3); font-size: 11px; }
   .actions { padding-top: 4px; }
   .data { padding: 4px; }
 </style>

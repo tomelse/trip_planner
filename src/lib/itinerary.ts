@@ -92,3 +92,14 @@ export function buildItinerary(d: TripDetail): Itinerary {
     },
   }
 }
+
+/**
+ * Days that are over, and the rest. The itinerary opens on what is still ahead, with the earlier days tucked away,
+ * so the first thing under the trip banner and Next up is the next day rather than last week. If every day is in the
+ * past (a finished trip) there is nothing "ahead", so everything is shown.
+ */
+export function splitPast(days: Day[], today: string): { past: Day[]; ahead: Day[]; collapsible: boolean } {
+  const past = days.filter((d) => d.day < today)
+  const ahead = days.filter((d) => d.day >= today)
+  return { past, ahead, collapsible: past.length > 0 && ahead.length > 0 }
+}

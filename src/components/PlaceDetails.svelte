@@ -4,6 +4,8 @@
   import { categoryLabel } from '../lib/categories'
   import { directionsUrl } from '../lib/maps'
   import type { Place } from '../lib/types'
+  import { covers } from '../lib/covers.svelte'
+  import PlaceCover from './PlaceCover.svelte'
   import ChecklistEditor from './ChecklistEditor.svelte'
   import AttachmentList from './AttachmentList.svelte'
 
@@ -14,7 +16,9 @@
 </script>
 
 <div class="details">
-  {#if place.category}<p class="chip">{categoryLabel(place.category)}</p>{/if}
+  <PlaceCover {place} />
+  <!-- With a cover photo the category is shown on the photo, so don't say it twice. -->
+  {#if place.category && !(covers.enabled && covers.state(place.id)?.status === 'ready')}<p class="chip">{categoryLabel(place.category)}</p>{/if}
   {#if place.address}<p class="addr">{place.address}</p>{/if}
   {#if when}
     <div class="row"><span class="k">When</span><span>{when}</span></div>

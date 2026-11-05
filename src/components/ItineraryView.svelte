@@ -1,31 +1,34 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
   import { hoverable } from '../lib/hoverable'
-  import { scrollWithin } from '../lib/scroll'
   import { fmt } from '../lib/dates'
   import { clock } from '../lib/clock.svelte'
   import { legTitle, modeLabel } from '../lib/legs'
-  import { buildItinerary } from '../lib/itinerary'
+  import { buildItinerary, splitPast } from '../lib/itinerary'
   import NextUpCard from './NextUpCard.svelte'
+  import TripBanner from './TripBanner.svelte'
 
   const itin = $derived(buildItinerary(store.current!))
   const today = $derived(clock.today)
-  const nextDay = $derived(itin.days.find((d) => d.day >= today)?.day)
-
-  let root: HTMLDivElement | undefined = $state()
-  let scrolledFor = -1
+  const split = $derived(splitPast(itin.days, today))
+  let showPast = $state(false)
+  // A different trip starts with its earlier days tucked away again.
   $effect(() => {
-    const id = store.current?.trip.id ?? -1
-    if (!root || id === scrolledFor) return
-    scrolledFor = id
-    const day = nextDay && root.querySelector<HTMLElement>(`[data-day="${nextDay}"]`)
-    if (day) scrollWithin(day, 'start')
+    void store.current?.trip.id
+    showPast = false
   })
+  const days = $derived(split.collapsible && !showPast ? split.ahead : itin.days)
 </script>
 
-<div bind:this={root} class="agenda">
+<div class="agenda">
+  <TripBanner />
   <NextUpCard />
-  {#each itin.days as d (d.day)}
+  {#if split.collapsible}
+    <button class="earlier" aria-expanded={showPast} onclick={() => (showPast = !showPast)}>
+      {showPast ? 'Hide earlier days' : `Show ${split.past.length} earlier ${split.past.length === 1 ? 'day' : 'days'}`}
+    </button>
+  {/if}
+  {#each days as d (d.day)}
     <section data-day={d.day} class:today={d.day === today} class:past={d.day < today}>
       <h3>
         <span class="dnum">{fmt(d.day, { day: 'numeric' })}</span>
@@ -78,11 +81,8 @@
 </div>
 
 <style>
-  section {
-    border-top: 1px solid var(--line); padding: 10px 12px 6px;
-    /* Scrolling to a day stops this far short, so it lands just under the sticky Month | Itinerary bar. */
-    scroll-margin-top: calc(var(--sticky-top, 0px) + var(--viewbar-h));
-  }
+  .earlier { display: block; width: calc(100% - 24px); margin: 0 12px 8px; border-style: dashed; color: var(--ink-2); font-size: 12px; }
+  section { border-top: 1px solid var(--line); padding: 10px 12px 6px; }
   section:first-of-type { border-top: none; }
   section.past { opacity: 0.55; }
   h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font-size: 14px; font-weight: 600; }
