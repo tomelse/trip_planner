@@ -119,6 +119,9 @@ path.leaflet-interactive { outline: none; -webkit-tap-highlight-color: transpare
   input, select, textarea { font-size: 16px; }
 }
 @media (pointer: coarse) {
+  /* The page itself doesn't pinch-zoom (it is an app, laid out for the screen); scrolling still works. The map
+     is separate: Leaflet turns its own container to touch-action: none and handles its pinch itself. */
+  html, body { touch-action: pan-x pan-y; }
   button, input, select { min-height: 36px; }
   .pin-wrap { width: 32px !important; height: 32px !important; margin: -16px 0 0 -16px !important; display: flex; align-items: center; justify-content: center; }
 }
