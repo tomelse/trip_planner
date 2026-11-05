@@ -34,6 +34,7 @@ Publishing to GitHub Pages: push the project to a GitHub repository, then in **S
 - A backup is a `.zip` with the trips as JSON and the attached files. Export now and then: clearing a browser's site data deletes the trips.
 - Deleting something hides it for 30 days so it can be undone (the toast, or Cmd/Ctrl+Z). After that it is purged on the next start.
 - Time zones are looked up offline from coordinates ([tz-lookup](https://github.com/photostructure/tz-lookup)) and can be overridden per leg end.
+- Photos (JPEG, PNG, WebP) bigger than 2048 px are scaled down when you attach them, which also removes hidden metadata such as the GPS position they were taken at. Other files are stored exactly as they are.
 - Files can be up to 50 MB each. Only plain images are ever shown in the app; everything else downloads.
 
 ### Coming from the old server version

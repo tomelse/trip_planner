@@ -1,5 +1,6 @@
 import { api } from './api'
 import * as db from './db'
+import { shrinkImage } from './files'
 import { addDays, iso, parse } from './dates'
 import { reverse } from './geo'
 import { Focus } from './focus.svelte'
@@ -309,7 +310,7 @@ class Store {
     if (!d) return
     for (const file of files) {
       try {
-        const a: Attachment = await api.upload(d.trip.id, file, target)
+        const a: Attachment = await api.upload(d.trip.id, await shrinkImage(file), target)
         d.attachments.push(a)
       } catch (e) {
         this.notify(`${file.name}: ${e instanceof Error ? e.message : e}`)
