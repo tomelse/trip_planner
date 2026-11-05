@@ -31,7 +31,7 @@ Publishing to GitHub Pages: push the project to a GitHub repository, then in **S
 ## Your data
 
 - Data lives in the browser's storage for each address, so `localhost`, the Pages site and each device are separate. Use the trip menu at the top of the map (the trip name) → **Backup & import…** to move trips between them. Importing always adds new trips; it never overwrites.
-- A backup is a `.zip` with the trips as JSON and the attached files. Export now and then: clearing a browser's site data deletes the trips.
+- A backup is a `.zip` with the trips as JSON and the attached files. On Android there is also **Share backup…**, which sends it through the share menu (Drive, email, a chat). The app notes when you last backed up and shows a dot on the trip menu once a backup is overdue (two weeks, or a week for a first backup). Export now and then: clearing a browser's site data deletes the trips.
 - Deleting something hides it for 30 days so it can be undone (the toast, or Cmd/Ctrl+Z). After that it is purged on the next start.
 - Time zones are looked up offline from coordinates ([tz-lookup](https://github.com/photostructure/tz-lookup)) and can be overridden per leg end.
 - Photos (JPEG, PNG, WebP) bigger than 2048 px are scaled down when you attach them, which also removes hidden metadata such as the GPS position they were taken at. Other files are stored exactly as they are.

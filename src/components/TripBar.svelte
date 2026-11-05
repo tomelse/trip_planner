@@ -49,11 +49,18 @@
       <span class="name">{trip?.name ?? 'No trips yet'}</span>
       {#if dates}<small>{dates}</small>{/if}
     </span>
+    {#if store.backup.due}<span class="dot" role="img" aria-label="Time to back up your trips" title="Time to back up your trips"></span>{/if}
     <span class="chev" aria-hidden="true">▾</span>
   </button>
 
   {#if open}
     <div class="panel" role="menu">
+      {#if store.backup.due && !showData}
+        <button class="nudge" role="menuitem" onclick={() => (showData = true)}>
+          <strong>Back up your trips</strong>
+          <small>{store.backup.label}. They are only stored on this device.</small>
+        </button>
+      {/if}
       {#if store.trips.length}
         <ul>
           {#each store.trips as t (t.id)}
@@ -82,6 +89,9 @@
   .text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
   .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .text small { color: var(--ink-2); font-size: 11px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+  .nudge { display: flex; flex-direction: column; align-items: flex-start; width: 100%; border: none; text-align: left; gap: 1px; margin-bottom: 4px; background: var(--hover); }
+  .nudge small { color: var(--ink-2); font-size: 11px; }
   .chev { color: var(--ink-3); flex: none; }
   .panel {
     position: absolute; z-index: 2000; top: calc(100% + 6px); left: 0;

@@ -1,6 +1,7 @@
 import { api } from './api'
 import * as db from './db'
 import { shrinkImage } from './files'
+import { backupStatus, noteFirstUse, type BackupStatus } from './backupStatus'
 import { addDays, iso, parse } from './dates'
 import { reverse } from './geo'
 import { Focus } from './focus.svelte'
@@ -39,6 +40,8 @@ class Store {
   /** A place shared into the app, waiting for you to confirm where it is. */
   shared = $state<Shared | null>(null)
   tripMenuOpen = $state(false)
+  /** Whether a backup is overdue, and how long ago the last one was. */
+  backup = $state<BackupStatus>({ due: false, label: '' })
   layersOpen = $state(false)
   error = $state<string | null>(null)
   /** Category chip selected in the Places tab; hides other places in the list and dims them on the map. */
@@ -59,6 +62,8 @@ class Store {
       navigator.storage?.persist?.().catch(() => {})
       await db.purge()
       this.trips = await api.trips()
+      if (this.trips.length) noteFirstUse()
+      this.refreshBackup()
       const last = Number(localStorage.getItem(LAST_TRIP_KEY))
       const first = this.trips.find((t) => t.id === last) ?? this.trips[0]
       if (first) await this.openTrip(first.id)
@@ -106,6 +111,10 @@ class Store {
       this.trips = await api.trips()
       await this.openTrip(t.id)
     })
+  }
+
+  refreshBackup() {
+    this.backup = backupStatus(this.trips.length > 0)
   }
 
   /** Show a message for a few seconds; with `undo`, the toast offers to reverse the delete. */

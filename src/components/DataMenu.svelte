@@ -1,6 +1,7 @@
 <script lang="ts">
   import { store } from '../lib/store.svelte'
   import { buildBackup, download, importBackup, safeName } from '../lib/backup'
+  import { markBackedUp } from '../lib/backupStatus'
 
   let input: HTMLInputElement | undefined = $state()
   let busy = $state(false)
@@ -28,20 +29,48 @@
     busy = false
   }
 
+  const done = (message: string) => {
+    markBackedUp()
+    store.refreshBackup()
+    return message
+  }
+
   const exportTrip = () =>
     run(async () => {
       const t = store.current?.trip
       if (!t) return 'No trip is open.'
       await store.flush()
       download(await buildBackup([t.id]), `${safeName(t.name)}-${today()}.zip`)
-      return 'Backup saved.'
+      return done('Backup saved.')
     })
 
   const exportAll = () =>
     run(async () => {
       await store.flush()
       download(await buildBackup(), `trips-${today()}.zip`)
-      return 'Backup saved.'
+      return done('Backup saved.')
+    })
+
+  // Android's share menu: one tap to put the backup in Drive, an email, a chat. Only offered where it can send files.
+  const canShare = (() => {
+    try {
+      return !!navigator.canShare?.({ files: [new File([''], 'x.zip', { type: 'application/zip' })] })
+    } catch {
+      return false
+    }
+  })()
+
+  const shareAll = () =>
+    run(async () => {
+      await store.flush()
+      const file = new File([await buildBackup() as BlobPart], `trips-${today()}.zip`, { type: 'application/zip' })
+      try {
+        await navigator.share({ files: [file], title: 'Trip Planner backup' })
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return '' // you closed the share menu
+        throw e
+      }
+      return done('Backup shared.')
     })
 
   const pick = () =>
@@ -60,10 +89,12 @@
   <div class="btns">
     <button disabled={busy || !store.current} onclick={exportTrip}>Export this trip</button>
     <button disabled={busy || !store.trips.length} onclick={exportAll}>Export all trips</button>
+    {#if canShare}<button disabled={busy || !store.trips.length} onclick={shareAll}>Share backup…</button>{/if}
     <button disabled={busy} onclick={() => input?.click()}>Import backup…</button>
     <input bind:this={input} type="file" accept=".zip,application/zip" hidden onchange={pick} />
   </div>
   {#if message}<p class="msg" role="status">{message}</p>{/if}
+  <p class="status" class:due={store.backup.due}>{store.backup.label}{store.backup.due ? ': time to back up.' : '.'}</p>
   <p class="status">
     {#if persisted === true}Protected from automatic clean-up.{:else if persisted === false}Not marked as protected. Install the app to your home screen to help keep your data safe.{/if}
     {#if used !== null} {mb(used)} used.{/if}
@@ -76,4 +107,5 @@
   .btns { display: flex; flex-wrap: wrap; gap: 6px; }
   .msg { color: var(--ink); }
   .status { color: var(--ink-3); }
+  .status.due { color: var(--warn); }
 </style>
